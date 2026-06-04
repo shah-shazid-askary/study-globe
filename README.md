@@ -44,13 +44,7 @@ The project utilizes a modern web development stack to assure performance, scala
 
 ---
 
-## 👥 Meet The Team
 
-This capstone project was conceptualized, designed, and developed by:
-
-- **Kawshik Kumar Saha** — Database Design, API Architecture, Documentation, Testing & Validation
-- **Md. Fazly Rabby** — Frontend Development & UI/UX Design
-- **Md. Munjurul Islam** — Backend Development & Data Integration
 
 ---
 
