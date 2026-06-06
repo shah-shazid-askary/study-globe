@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../services/api';
+import { authAPI, profileAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -8,19 +8,36 @@ export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // FIX: Session was never persisted — user was logged out on every page refresh
+  // persist session and sync user details (full_name, role) from backend on mount
   useEffect(() => {
-    const stored = localStorage.getItem('supabase_session');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setSession(parsed);
-        setUser(parsed?.user || null);
-      } catch {
-        localStorage.removeItem('supabase_session');
+    const loadSession = async () => {
+      const stored = localStorage.getItem('supabase_session');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setSession(parsed);
+          setUser(parsed?.user || null);
+
+          // Asynchronously query the fresh profile to update the role and name
+          const res = await profileAPI.get();
+          if (res?.data) {
+            const freshUser = {
+              ...parsed.user,
+              full_name: res.data.full_name || parsed.user.full_name,
+              role: res.data.role || parsed.user.role || 'student'
+            };
+            setUser(freshUser);
+            parsed.user = freshUser;
+            localStorage.setItem('supabase_session', JSON.stringify(parsed));
+          }
+        } catch (err) {
+          console.error('Failed to sync user session role on load:', err);
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    loadSession();
   }, []);
 
   const register = async (email, password, full_name) => {

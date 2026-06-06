@@ -18,12 +18,22 @@ const updateUserRole = async (req, res) => {
   }
 
   try {
-    const { data, error } = await supabase.from('users').update({ role }).eq('id', id).select().single();
+    const { data, error } = await supabase
+      .from('users')
+      .update({ role })
+      .eq('id', id)
+      .select();
+
     if (error) throw error;
-    res.json(data);
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: 'User not found or you do not have permission to modify this user. (If running locally, please restart your backend server to ensure the service role key is loaded)' });
+    }
+
+    res.json(data[0]);
   } catch (err) {
     console.error('[User Controller] Failed to update role:', err);
-    res.status(500).json({ error: JSON.stringify(err, Object.getOwnPropertyNames(err)) });
+    res.status(500).json({ error: err.message || 'Failed to update user role' });
   }
 };
 
