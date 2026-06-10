@@ -1,13 +1,14 @@
 [build]
   command = "npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix backend"
   publish = "frontend/build"
-  functions = "backend/functions"
 
 [build.environment]
   NODE_VERSION = "20"
 
 [functions]
+  directory = "backend/functions"
   node_bundler = "esbuild"
+  included_files = ["backend/**"]
   external_node_modules = [
     "express",
     "cors",
@@ -22,6 +23,12 @@
 
 [functions.api]
   timeout = 26
+
+[dev]
+  command = "npm start --prefix frontend"
+  targetPort = 3000
+  port = 8888
+  autoLaunch = false
 
 [[redirects]]
   from = "/api/*"

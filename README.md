@@ -108,6 +108,27 @@ npm start
 
 *The frontend application will now launch automatically on `http://localhost:3000`.*
 
+### Step 4: Deploy to Netlify
+
+1. Push the repository to GitHub (or GitLab/Bitbucket).
+2. In [Netlify](https://app.netlify.com/), click **Add new site → Import an existing project** and connect the repo.
+3. Leave **Base directory** empty — `netlify.toml` at the repo root configures the build.
+4. Under **Site configuration → Environment variables**, add:
+   - `SUPABASE_URL` — your Supabase project URL
+   - `SUPABASE_SERVICE_KEY` — your Supabase service role key
+   - `FRONTEND_URL` — your Netlify site URL (e.g. `https://your-site.netlify.app`)
+   - `OLLAMA_HOST`, `OLLAMA_API_KEY`, `OLLAMA_MODEL` — optional, for AI chat/SOP review
+5. Deploy. The React app is served from `frontend/build` and `/api/*` routes to the Express serverless function.
+
+**Local Netlify preview** (frontend + API together):
+
+```bash
+npm install -g netlify-cli
+netlify dev
+```
+
+Opens at `http://localhost:8888` with API at `/api`.
+
 ---
 
 <div align="center">
