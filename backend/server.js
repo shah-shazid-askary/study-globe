@@ -21,13 +21,15 @@ const sopReviewRoutes = require('./routes/sopReview');
 
 const app = express();
 
-// CORS: allow Netlify production, preview deploys, and local dev
+// CORS: allow Vercel, Netlify, preview deploys, and local dev
 const allowedOrigins = new Set(
   [
     process.env.FRONTEND_URL,
     process.env.URL,
     process.env.DEPLOY_PRIME_URL,
     process.env.DEPLOY_URL,
+    process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`,
+    process.env.VERCEL_BRANCH_URL,
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:8888',
@@ -40,6 +42,7 @@ app.use(cors({
     if (allowedOrigins.has(origin)) return callback(null, true);
     if (/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) return callback(null, true);
     if (/^https:\/\/([a-z0-9-]+\.)*netlify\.app$/.test(origin)) return callback(null, true);
+    if (/^https:\/\/([a-z0-9-]+\.)*vercel\.app$/.test(origin)) return callback(null, true);
     return callback(null, false);
   },
   credentials: true,
@@ -67,8 +70,9 @@ apiRouter.use('/ai/review-sop', sopReviewRoutes);
 
 apiRouter.get('/health', (req, res) => res.json({ status: 'OK' }));
 
-// Mount at /api for local dev; also at / for Netlify function proxy (strips /api prefix)
+// /api — local dev | /_/backend — Vercel Services | / — Netlify function proxy
 app.use('/api', apiRouter);
+app.use('/_/backend', apiRouter);
 app.use('/', apiRouter);
 
 // FIX: Added 404 handler

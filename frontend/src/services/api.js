@@ -11,13 +11,20 @@ const resolveApiBaseUrl = () => {
   const { hostname, port } = window.location;
   const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
 
-  // Netlify production, previews, and `netlify dev` (port 8888) — API is same-origin
-  if (!isLocalhost || port === '8888') {
+  if (isLocalhost && port === '8888') {
     return '/api';
   }
 
-  // CRA dev server with separate Express backend
-  return `http://localhost:${process.env.REACT_APP_BACKEND_PORT || '5000'}/api`;
+  if (isLocalhost) {
+    return `http://localhost:${process.env.REACT_APP_BACKEND_PORT || '5000'}/api`;
+  }
+
+  if (hostname.includes('netlify.app')) {
+    return '/api';
+  }
+
+  // Vercel Services — backend mounted at /_/backend
+  return '/_/backend';
 };
 
 const API_BASE_URL = resolveApiBaseUrl();

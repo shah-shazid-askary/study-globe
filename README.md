@@ -108,7 +108,27 @@ npm start
 
 *The frontend application will now launch automatically on `http://localhost:3000`.*
 
-### Step 4: Deploy to Netlify
+### Step 4: Deploy to Vercel
+
+1. Push the repository to GitHub and import it in [Vercel](https://vercel.com/new).
+2. Set the project **Framework Preset** to **Services** (required for `experimentalServices`).
+3. Leave the root directory as the repo root — `vercel.json` configures both services.
+4. Add **Environment variables** (all services share them):
+   - `SUPABASE_URL` — your Supabase project URL
+   - `SUPABASE_SERVICE_KEY` — your Supabase service role key
+   - `FRONTEND_URL` — your Vercel URL (e.g. `https://your-app.vercel.app`)
+5. Deploy. The frontend is served at `/` and the Express API at `/_/backend` (e.g. `/_/backend/auth/login`).
+
+**Verify after deploy:** `https://your-app.vercel.app/_/backend/health` → `{"status":"OK"}`
+
+**Local Vercel preview** (frontend + backend together):
+
+```bash
+npm install -g vercel
+vercel dev -L
+```
+
+### Step 5: Deploy to Netlify
 
 1. Push the repository to GitHub (or GitLab/Bitbucket).
 2. In [Netlify](https://app.netlify.com/), click **Add new site → Import an existing project** and connect the repo.
