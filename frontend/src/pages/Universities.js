@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { universitiesAPI } from '../services/api';
+import { universitiesAPI, profileAPI } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
-import { useProfile } from '../context/ProfileContext';
 
 const getCountryFlagUrl = (countryName) => {
   const name = countryName?.toLowerCase()?.trim() || '';
@@ -68,8 +67,8 @@ const getMatchColor = (score) => {
 
 const Universities = () => {
   const { t, lang } = useLanguage();
-  const { profile } = useProfile();
   const [universities, setUniversities] = useState([]);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchParams] = useSearchParams();
@@ -100,6 +99,13 @@ const Universities = () => {
 
   useEffect(() => {
     fetchUniversities('');
+    const loadProfile = async () => {
+      try {
+        const res = await profileAPI.get();
+        setProfile(res.data);
+      } catch (err) {}
+    };
+    loadProfile();
   }, []);
 
   const handleSearch = (e) => {

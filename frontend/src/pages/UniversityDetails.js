@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { universitiesAPI } from '../services/api';
+import { universitiesAPI, profileAPI } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
-import { useProfile } from '../context/ProfileContext';
 
 // FIX: Added tabs for Intake (FR-07), Language (FR-08), Scholarships (FR-09) — all were missing
 const TABS = [
@@ -16,24 +15,28 @@ const TABS = [
 const UniversityDetails = () => {
   const { id } = useParams();
   const { lang } = useLanguage();
-  const { profile } = useProfile();
   const [university, setUniversity] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('Overview');
 
   useEffect(() => {
-    const loadDetails = async () => {
+    const loadDetailsAndProfile = async () => {
       try {
-        const uniRes = await universitiesAPI.getById(id);
+        const [uniRes, profileRes] = await Promise.all([
+          universitiesAPI.getById(id),
+          profileAPI.get().catch(() => ({ data: null }))
+        ]);
         setUniversity(uniRes.data);
+        setProfile(profileRes.data);
       } catch (err) {
         setError('University not found or failed to load.');
       } finally {
         setLoading(false);
       }
     };
-    loadDetails();
+    loadDetailsAndProfile();
   }, [id]);
 
   if (loading) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { tasksAPI, documentsAPI, aiAPI } from '../services/api';
+import { tasksAPI, documentsAPI, aiAPI, profileAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { useProfile } from '../context/ProfileContext';
 import { useLanguage } from '../context/LanguageContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -45,7 +44,6 @@ const getDocIcon = (docType, className = "w-6 h-6") => {
 
 const ApplicationsPage = () => {
   const { user, isAdmin } = useAuth();
-  const { profile } = useProfile();
   const { t, lang } = useLanguage();
 
   // Application Tasks State
@@ -61,6 +59,7 @@ const ApplicationsPage = () => {
   const [docInputs, setDocInputs] = useState({}); // { [doc_type]: google_drive_url }
 
   // SOP Reviewer State
+  const [profile, setProfile] = useState(null);
   const [showSopReviewer, setShowSopReviewer] = useState(false);
   const [sopText, setSopText] = useState('');
   const [loadingReview, setLoadingReview] = useState(false);
@@ -92,7 +91,18 @@ const ApplicationsPage = () => {
   useEffect(() => {
     fetchTasks();
     fetchDocuments();
+    fetchProfile();
   }, []);
+
+  // Fetch Profile for SOP Review targets
+  const fetchProfile = async () => {
+    try {
+      const res = await profileAPI.get();
+      setProfile(res.data);
+    } catch (err) {
+      console.error('Failed to retrieve profile for target mapping:', err);
+    }
+  };
 
   // Fetch Tasks
   const fetchTasks = async () => {

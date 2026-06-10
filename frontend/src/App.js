@@ -1,7 +1,6 @@
 import React, { useState, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { ProfileProvider } from './context/ProfileContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import Navbar from './components/Navbar';
@@ -88,9 +87,7 @@ function App() {
       <ThemeProvider>
         <LanguageProvider>
           <AuthProvider>
-            <ProfileProvider>
-              <AppContent sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-            </ProfileProvider>
+            <AppContent sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
           </AuthProvider>
         </LanguageProvider>
       </ThemeProvider>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useProfile } from '../context/ProfileContext';
 import { useLanguage } from '../context/LanguageContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -12,7 +11,6 @@ import LorReviewSection from '../components/LorReviewSection';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { profile, loading: profileLoading } = useProfile();
   const { t, lang } = useLanguage();
   const name = user?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Student';
 
@@ -33,19 +31,18 @@ const Dashboard = () => {
   const [isLorOpen, setIsLorOpen] = useState(false);
 
   useEffect(() => {
-    if (profileLoading) return;
-
     const loadDashboardMetrics = async () => {
       try {
         setLoadingMetrics(true);
-        const [tasksRes, docsRes, prepRes] = await Promise.all([
+        const [profileRes, tasksRes, docsRes, prepRes] = await Promise.all([
+          profileAPI.get().catch(() => ({ data: {} })),
           tasksAPI.getAll().catch(() => ({ data: [] })),
           documentsAPI.getAll().catch(() => ({ data: [] })),
           predepartureAPI.get().catch(() => ({ data: [] })),
         ]);
 
         // 1. Profile completeness calculation
-        const p = profile;
+        const p = profileRes.data;
         if (p) {
           const fields = [
             p.full_name,
@@ -87,7 +84,7 @@ const Dashboard = () => {
     };
 
     loadDashboardMetrics();
-  }, [profile, profileLoading]);
+  }, []);
 
   const overallCompleteness = Math.round(
     (profileProgress * 0.25) +

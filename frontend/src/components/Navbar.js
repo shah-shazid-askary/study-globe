@@ -4,12 +4,10 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { tasksAPI, documentsAPI, predepartureAPI } from '../services/api';
-import { useProfile } from '../context/ProfileContext';
+import { tasksAPI, documentsAPI, profileAPI, predepartureAPI } from '../services/api';
 
 const Navbar = ({ toggleSidebar }) => {
   const { isAuthenticated, user, logout } = useAuth();
-  const { profile } = useProfile();
   const { theme, toggleTheme } = useTheme();
   const { lang, toggleLanguage, t } = useLanguage();
   const navigate = useNavigate();
@@ -37,9 +35,10 @@ const Navbar = ({ toggleSidebar }) => {
   const fetchNotifications = async () => {
     if (!isAuthenticated) return;
     try {
-      const [tasksRes, docsRes, prepRes] = await Promise.all([
+      const [tasksRes, docsRes, profileRes, prepRes] = await Promise.all([
         tasksAPI.getAll().catch(() => ({ data: [] })),
         documentsAPI.getAll().catch(() => ({ data: [] })),
+        profileAPI.get().catch(() => ({ data: null })),
         predepartureAPI.get().catch(() => ({ data: [] }))
       ]);
 
@@ -109,7 +108,7 @@ const Navbar = ({ toggleSidebar }) => {
       });
 
       // 3. Process profile completeness
-      const p = profile;
+      const p = profileRes?.data;
       if (p) {
         const fields = [
           { name: 'Full Name', val: p.full_name },
@@ -172,7 +171,7 @@ const Navbar = ({ toggleSidebar }) => {
     } else {
       setNotifications([]);
     }
-  }, [isAuthenticated, lang, profile]);
+  }, [isAuthenticated, lang]);
 
   const handleLogout = async () => {
     await logout();
