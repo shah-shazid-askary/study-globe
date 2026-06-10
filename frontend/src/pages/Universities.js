@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { universitiesAPI, profileAPI } from '../services/api';
+import { universitiesAPI } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useProfile } from '../context/ProfileContext';
 
 const getCountryFlagUrl = (countryName) => {
   const name = countryName?.toLowerCase()?.trim() || '';
@@ -67,8 +68,8 @@ const getMatchColor = (score) => {
 
 const Universities = () => {
   const { t, lang } = useLanguage();
+  const { profile } = useProfile();
   const [universities, setUniversities] = useState([]);
-  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchParams] = useSearchParams();
@@ -87,6 +88,9 @@ const Universities = () => {
       if (cid) params.country_id = cid;
       const res = await universitiesAPI.getAll(params);
       setUniversities(res.data);
+      if (!search?.trim() && !cid) {
+        setDbUniversities(res.data.sort((a, b) => a.Name.localeCompare(b.Name)));
+      }
     } catch (err) {
       setError('Failed to load universities. Please try again.');
     } finally {
@@ -94,23 +98,8 @@ const Universities = () => {
     }
   };
 
-  const fetchAllUniversities = async () => {
-    try {
-      const res = await universitiesAPI.getAll();
-      setDbUniversities(res.data.sort((a, b) => a.Name.localeCompare(b.Name)));
-    } catch (err) {}
-  };
-
   useEffect(() => {
     fetchUniversities('');
-    fetchAllUniversities();
-    const loadProfile = async () => {
-      try {
-        const res = await profileAPI.get();
-        setProfile(res.data);
-      } catch (err) {}
-    };
-    loadProfile();
   }, []);
 
   const handleSearch = (e) => {

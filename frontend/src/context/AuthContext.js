@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI, profileAPI } from '../services/api';
+import { authAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -57,22 +57,8 @@ export const AuthProvider = ({ children }) => {
           }
         }
 
-        // Sync fresh role and name from backend
-        const res = await profileAPI.get();
-        if (res?.data) {
-          const freshUser = {
-            ...parsed.user,
-            full_name: res.data.full_name || parsed?.user?.full_name,
-            role: res.data.role || parsed?.user?.role || 'student',
-          };
-          setUser(freshUser);
-          parsed.user = freshUser;
-          localStorage.setItem('supabase_session', JSON.stringify(parsed));
-        }
       } catch (err) {
-        console.error('Failed to sync user session role on load:', err);
-        // Don't clear the session here — the user may still be valid
-        // The api.js interceptor handles 401 responses
+        console.error('Failed to restore session on load:', err);
       }
 
       setLoading(false);

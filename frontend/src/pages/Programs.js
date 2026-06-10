@@ -72,7 +72,7 @@ const Programs = () => {
   const [filters, setFilters] = useState({ degree_level: '', field: '' });
   const [dbFields, setDbFields] = useState([]);
 
-  const fetchPrograms = async (f) => {
+  const fetchPrograms = async (f, { updateFields = false } = {}) => {
     setLoading(true);
     setError('');
     try {
@@ -81,6 +81,10 @@ const Programs = () => {
       if (f.field) params.field = f.field;
       const res = await programsAPI.getAll(params);
       setPrograms(res.data);
+      if (updateFields) {
+        const all = res.data.map((p) => p.field).filter(Boolean);
+        setDbFields([...new Set(all)].sort());
+      }
     } catch (err) {
       setError('Failed to load programs.');
     } finally {
@@ -88,15 +92,7 @@ const Programs = () => {
     }
   };
 
-  const fetchFields = async () => {
-    try {
-      const res = await programsAPI.getAll({});
-      const all = res.data.map(p => p.field).filter(Boolean);
-      setDbFields([...new Set(all)].sort());
-    } catch (err) {}
-  };
-
-  useEffect(() => { fetchPrograms(filters); fetchFields(); }, []);
+  useEffect(() => { fetchPrograms(filters, { updateFields: true }); }, []);
 
   const handleFilter = (e) => { e.preventDefault(); fetchPrograms(filters); };
   const handleChange = (e) => setFilters({ ...filters, [e.target.name]: e.target.value });

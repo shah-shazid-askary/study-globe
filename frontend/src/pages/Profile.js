@@ -2,13 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { profileAPI, countriesAPI, programsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useProfile } from '../context/ProfileContext';
 import { useLanguage } from '../context/LanguageContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import MultiSelectSearch from '../components/MultiSelectSearch';
 
+const profileToFormData = (p) => ({
+  full_name: p.full_name || '',
+  date_of_birth: p.date_of_birth || '',
+  phone: p.phone || '',
+  current_education_level: p.current_education_level || '',
+  field_of_interest: p.field_of_interest || '',
+  preferred_countries: Array.isArray(p.preferred_countries)
+    ? p.preferred_countries.join(', ')
+    : (p.preferred_countries || ''),
+  budget_range: p.budget_range || '',
+  target_intake: p.target_intake || '',
+});
+
 const Profile = () => {
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
+  const { profile, loading: profileLoading, updateProfile } = useProfile();
   const { lang } = useLanguage();
   const location = useLocation();
   const [formData, setFormData] = useState({
@@ -31,39 +46,30 @@ const Profile = () => {
   const [aiError, setAiError] = useState('');
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchReferenceData = async () => {
       try {
-        const [profileRes, countriesRes, programsRes] = await Promise.all([
-          profileAPI.get(),
+        const [countriesRes, programsRes] = await Promise.all([
           countriesAPI.getAll().catch(() => ({ data: [] })),
-          programsAPI.getAll().catch(() => ({ data: [] }))
+          programsAPI.getAll().catch(() => ({ data: [] })),
         ]);
         setDbCountries(countriesRes.data || []);
-        const allFields = (programsRes.data || []).map(p => p.field).filter(Boolean);
+        const allFields = (programsRes.data || []).map((p) => p.field).filter(Boolean);
         setDbFields([...new Set(allFields)].sort());
-        const p = profileRes.data;
-        if (p && Object.keys(p).length > 0) {
-          setFormData({
-            full_name: p.full_name || '',
-            date_of_birth: p.date_of_birth || '',
-            phone: p.phone || '',
-            current_education_level: p.current_education_level || '',
-            field_of_interest: p.field_of_interest || '',
-            preferred_countries: Array.isArray(p.preferred_countries)
-              ? p.preferred_countries.join(', ')
-              : (p.preferred_countries || ''),
-            budget_range: p.budget_range || '',
-            target_intake: p.target_intake || '',
-          });
-        }
       } catch (err) {
         setMessage({ type: 'error', text: lang === 'en' ? 'Failed to load profile.' : 'প্রোফাইল লোড করতে ব্যর্থ হয়েছে।' });
       } finally {
         setLoading(false);
       }
     };
-    fetchProfile();
-  }, []);
+    fetchReferenceData();
+  }, [lang]);
+
+  useEffect(() => {
+    if (profileLoading) return;
+    if (profile && Object.keys(profile).length > 0) {
+      setFormData(profileToFormData(profile));
+    }
+  }, [profile, profileLoading]);
 
   useEffect(() => {
     if (!loading && location.hash === '#generate-plan') {
@@ -85,10 +91,7 @@ const Profile = () => {
     setSaving(true);
     setMessage({ type: '', text: '' });
     try {
-      await profileAPI.update(formData);
-      if (formData.full_name && formData.full_name.trim()) {
-        updateUser({ full_name: formData.full_name.trim() });
-      }
+      await updateProfile(formData);
       setMessage({ type: 'success', text: lang === 'en' ? 'Profile updated successfully!' : 'প্রোফাইল সফলভাবে আপডেট হয়েছে!' });
     } catch (err) {
       setMessage({ type: 'error', text: err.response?.data?.error || err.message || (lang === 'en' ? 'Failed to update profile.' : 'প্রোফাইল আপডেট করতে ব্যর্থ হয়েছে।') });
@@ -110,7 +113,7 @@ const Profile = () => {
     }
   };
 
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">

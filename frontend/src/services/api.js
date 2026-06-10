@@ -1,4 +1,11 @@
 import axios from 'axios';
+import {
+  buildCacheKey,
+  getCacheEntry,
+  isCacheFresh,
+  setCacheEntry,
+  invalidateCache,
+} from '../utils/apiCache';
 
 const resolveApiBaseUrl = () => {
   if (process.env.REACT_APP_API_URL) {
@@ -82,6 +89,23 @@ api.interceptors.request.use(
     if (session?.access_token) {
       config.headers.Authorization = `Bearer ${session.access_token}`;
     }
+
+    if (config.method === 'get' && config.cache !== false) {
+      const key = buildCacheKey('GET', config.url, config.params);
+      const cached = getCacheEntry(key);
+      if (cached && isCacheFresh(cached)) {
+        config.adapter = () =>
+          Promise.resolve({
+            data: cached.data,
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config,
+            request: {},
+          });
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -92,7 +116,14 @@ let isRefreshing = false;
 let pendingRequests = [];
 
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    const { config } = res;
+    if (config.method === 'get' && config.cache !== false) {
+      const key = buildCacheKey('GET', config.url, config.params);
+      setCacheEntry(key, res.data);
+    }
+    return res;
+  },
   async (error) => {
     const originalRequest = error.config;
     if (
@@ -165,64 +196,70 @@ export const authAPI = {
   resetPassword: (access_token, new_password) => api.post('/auth/reset-password', { access_token, new_password }),
 };
 
+const mutating = (request, ...invalidationKeys) =>
+  request.then((res) => {
+    invalidationKeys.forEach((key) => invalidateCache(key));
+    return res;
+  });
+
 export const countriesAPI = {
   getAll: () => api.get('/countries'),
   getById: (id) => api.get(`/countries/${id}`),
-  create: (data) => api.post('/countries', data),
-  update: (id, data) => api.put(`/countries/${id}`, data),
-  delete: (id) => api.delete(`/countries/${id}`),
+  create: (data) => mutating(api.post('/countries', data), 'GET:/countries'),
+  update: (id, data) => mutating(api.put(`/countries/${id}`, data), 'GET:/countries'),
+  delete: (id) => mutating(api.delete(`/countries/${id}`), 'GET:/countries'),
 };
 
 export const universitiesAPI = {
   getAll: (params) => api.get('/universities', { params }),
   getById: (id) => api.get(`/universities/${id}`),
-  create: (data) => api.post('/universities', data),
-  update: (id, data) => api.put(`/universities/${id}`, data),
-  delete: (id) => api.delete(`/universities/${id}`),
+  create: (data) => mutating(api.post('/universities', data), 'GET:/universities'),
+  update: (id, data) => mutating(api.put(`/universities/${id}`, data), 'GET:/universities'),
+  delete: (id) => mutating(api.delete(`/universities/${id}`), 'GET:/universities'),
 };
 
 export const programsAPI = {
   getAll: (params) => api.get('/programs', { params }),
   getByUniversity: (universityId, params) => api.get(`/programs/university/${universityId}`, { params }),
-  create: (data) => api.post('/programs', data),
-  update: (id, data) => api.put(`/programs/${id}`, data),
-  delete: (id) => api.delete(`/programs/${id}`),
+  create: (data) => mutating(api.post('/programs', data), 'GET:/programs'),
+  update: (id, data) => mutating(api.put(`/programs/${id}`, data), 'GET:/programs'),
+  delete: (id) => mutating(api.delete(`/programs/${id}`), 'GET:/programs'),
 };
 
 export const profileAPI = {
   get: () => api.get('/profile'),
-  update: (data) => api.put('/profile', data),
+  update: (data) => mutating(api.put('/profile', data), 'GET:/profile'),
   getRecommendations: () => api.get('/profile/recommendations'),
 };
 
 export const tasksAPI = {
   getAll: () => api.get('/tasks'),
-  create: (data) => api.post('/tasks', data),
-  update: (id, data) => api.put(`/tasks/${id}`, data),
-  delete: (id) => api.delete(`/tasks/${id}`),
+  create: (data) => mutating(api.post('/tasks', data), 'GET:/tasks'),
+  update: (id, data) => mutating(api.put(`/tasks/${id}`, data), 'GET:/tasks'),
+  delete: (id) => mutating(api.delete(`/tasks/${id}`), 'GET:/tasks'),
 };
 
 export const documentsAPI = {
   getAll: () => api.get('/documents'),
-  submit: (data) => api.post('/documents', data),
-  verify: (id, status) => api.put(`/documents/${id}/verify`, { status }),
+  submit: (data) => mutating(api.post('/documents', data), 'GET:/documents'),
+  verify: (id, status) => mutating(api.put(`/documents/${id}/verify`, { status }), 'GET:/documents'),
 };
 
 export const predepartureAPI = {
   get: () => api.get('/predeparture'),
-  update: (data) => api.put('/predeparture', data),
+  update: (data) => mutating(api.put('/predeparture', data), 'GET:/predeparture'),
 };
 
 export const resourcesAPI = {
   getAll: () => api.get('/resources'),
-  create: (data) => api.post('/resources', data),
-  update: (id, data) => api.put(`/resources/${id}`, data),
-  delete: (id) => api.delete(`/resources/${id}`),
+  create: (data) => mutating(api.post('/resources', data), 'GET:/resources'),
+  update: (id, data) => mutating(api.put(`/resources/${id}`, data), 'GET:/resources'),
+  delete: (id) => mutating(api.delete(`/resources/${id}`), 'GET:/resources'),
 };
 
 export const guidelinesAPI = {
   get: (countryId) => api.get(`/guidelines/${countryId}`),
-  update: (countryId, data) => api.post(`/guidelines/${countryId}`, data),
+  update: (countryId, data) => mutating(api.post(`/guidelines/${countryId}`, data), 'GET:/guidelines'),
 };
 
 export const aiAPI = {
