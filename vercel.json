@@ -9,7 +9,9 @@
       "root": "backend",
       "entrypoint": "server.js",
       "routePrefix": "/_/backend",
-      "framework": "express"
+      "framework": "express",
+      "maxDuration": 30,
+      "memory": 1024
     }
   }
 }

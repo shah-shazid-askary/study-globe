@@ -68,7 +68,13 @@ apiRouter.use('/resources', resourceRoutes);
 apiRouter.use('/guidelines', guidelineRoutes);
 apiRouter.use('/ai/review-sop', sopReviewRoutes);
 
-apiRouter.get('/health', (req, res) => res.json({ status: 'OK' }));
+apiRouter.get('/health', (req, res) => {
+  const supabase = require('./config/supabase');
+  res.json({
+    status: 'OK',
+    supabaseConfigured: supabase.isConfigured(),
+  });
+});
 
 // /api — local dev | /_/backend — Vercel Services | / — Netlify function proxy
 app.use('/api', apiRouter);
