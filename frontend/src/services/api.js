@@ -1,10 +1,26 @@
 import axios from 'axios';
 
-const API_BASE_URL =
-  process.env.REACT_APP_API_URL ||
-  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
-    ? 'http://localhost:5001/api'
-    : '/api');
+const resolveApiBaseUrl = () => {
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  if (typeof window === 'undefined') {
+    return '/api';
+  }
+
+  const { hostname, port } = window.location;
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+
+  // Netlify production, previews, and `netlify dev` (port 8888) — API is same-origin
+  if (!isLocalhost || port === '8888') {
+    return '/api';
+  }
+
+  // CRA dev server with separate Express backend
+  return `http://localhost:${process.env.REACT_APP_BACKEND_PORT || '5000'}/api`;
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,

@@ -21,6 +21,6 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$ro
 
 Write-Host ""
 Write-Host "Both servers are starting in separate windows!" -ForegroundColor Green
-Write-Host "  Backend  -> http://localhost:5000" -ForegroundColor Yellow
+Write-Host "  Backend  -> http://localhost:5001" -ForegroundColor Yellow
 Write-Host "  Frontend -> http://localhost:3000" -ForegroundColor Yellow
 Write-Host ""

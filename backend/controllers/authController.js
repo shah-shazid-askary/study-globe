@@ -66,7 +66,13 @@ const login = async (req, res) => {
 
   try {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return res.status(401).json({ error: 'Invalid email or password' });
+    if (error) {
+      const message = error.message || 'Invalid email or password';
+      return res.status(401).json({ error: message });
+    }
+    if (!data?.session) {
+      return res.status(401).json({ error: 'Login failed. Please verify your email and try again.' });
+    }
 
     // Fetch full_name from custom users table
     const { data: customUser } = await supabase

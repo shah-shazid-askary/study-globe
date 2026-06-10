@@ -1,4 +1,6 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const express = require('express');
 const cors = require('cors');
 
@@ -37,7 +39,7 @@ app.use(cors({
     if (!origin) return callback(null, true);
     if (allowedOrigins.has(origin)) return callback(null, true);
     if (/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) return callback(null, true);
-    if (/^https:\/\/[a-z0-9-]+(--[a-z0-9-]+)?\.netlify\.app$/.test(origin)) return callback(null, true);
+    if (/^https:\/\/([a-z0-9-]+\.)*netlify\.app$/.test(origin)) return callback(null, true);
     return callback(null, false);
   },
   credentials: true,
@@ -78,8 +80,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// For local development
-if (process.env.NODE_ENV !== 'production') {
+// Only start HTTP server when running server.js directly (not as a Netlify function import)
+if (require.main === module) {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }

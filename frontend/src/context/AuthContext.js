@@ -88,7 +88,12 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const response = await authAPI.login({ email, password });
-    const { user: userData, session: sessionData } = response.data;
+    const { user: userData, session: sessionData } = response.data || {};
+    if (!sessionData?.access_token) {
+      const err = new Error(response.data?.error || 'Login failed: invalid server response');
+      err.response = response;
+      throw err;
+    }
     setUser(userData);
     setSession(sessionData);
     localStorage.setItem('supabase_session', JSON.stringify(sessionData));
