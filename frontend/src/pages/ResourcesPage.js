@@ -32,7 +32,9 @@ const ResourcesPage = () => {
   const [activePreviewUrl, setActivePreviewUrl] = useState(null);
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newResource, setNewResource] = useState({ category: 'IELTS Academic', title: '', description: '', external_url: '', file_path: '' });
+  const [editingResource, setEditingResource] = useState(null);
+  const defaultResourceState = { category: 'IELTS Academic', title: '', description: '', external_url: '', file_path: '' };
+  const [newResource, setNewResource] = useState(defaultResourceState);
 
   const categories = ['All', 'IELTS Academic', 'IELTS General', 'TOEFL Preparation', 'Visa Templates'];
 
@@ -54,13 +56,31 @@ const ResourcesPage = () => {
     e.preventDefault();
     if (!newResource.title.trim() || !newResource.category) return;
     try {
-      await resourcesAPI.create(newResource);
-      setNewResource({ category: 'IELTS Academic', title: '', description: '', external_url: '', file_path: '' });
+      if (editingResource) {
+        await resourcesAPI.update(editingResource.id, newResource);
+      } else {
+        await resourcesAPI.create(newResource);
+      }
+      setNewResource(defaultResourceState);
+      setEditingResource(null);
       setShowAddForm(false);
       fetchResources();
     } catch (err) {
-      console.error('Failed to create resource:', err);
+      console.error('Failed to save resource:', err);
+      alert('Failed to save resource. Make sure you have correct permissions.');
     }
+  };
+
+  const handleEditClick = (res) => {
+    setEditingResource(res);
+    setNewResource({
+      category: res.category || 'IELTS Academic',
+      title: res.title || '',
+      description: res.description || '',
+      external_url: res.external_url || '',
+      file_path: res.file_path || ''
+    });
+    setShowAddForm(true);
   };
 
   const handleDeleteResource = async (id) => {
@@ -164,7 +184,17 @@ const ResourcesPage = () => {
 
         {isAdmin && (
           <button
-            onClick={() => setShowAddForm(prev => !prev)}
+            onClick={() => {
+              if (showAddForm) {
+                setShowAddForm(false);
+                setEditingResource(null);
+                setNewResource(defaultResourceState);
+              } else {
+                setShowAddForm(true);
+                setEditingResource(null);
+                setNewResource(defaultResourceState);
+              }
+            }}
             className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-2 px-5 rounded-xl text-sm transition-all shadow-sm hover:shadow-md active:scale-95 whitespace-nowrap"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -180,11 +210,17 @@ const ResourcesPage = () => {
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-indigo-200 dark:border-indigo-800/50 space-y-4">
           <h3 className="font-black text-lg text-gray-800 dark:text-white flex items-center gap-2">
             <span className="w-8 h-8 bg-indigo-100 dark:bg-indigo-950/50 rounded-lg flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
+              {editingResource ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              )}
             </span>
-            Upload New Study Resource
+            {editingResource ? 'Edit Study Resource' : 'Upload New Study Resource'}
           </h3>
           <form onSubmit={handleCreateResource} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -231,8 +267,20 @@ const ResourcesPage = () => {
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition">{t('btnCancel')}</button>
-              <button type="submit" className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition">{t('btnSave')}</button>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setShowAddForm(false);
+                  setEditingResource(null);
+                  setNewResource(defaultResourceState);
+                }} 
+                className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+              >
+                {t('btnCancel')}
+              </button>
+              <button type="submit" className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition">
+                {editingResource ? 'Update' : t('btnSave')}
+              </button>
             </div>
           </form>
         </div>
@@ -323,15 +371,26 @@ const ResourcesPage = () => {
                       </a>
                     )}
                     {isAdmin && (
-                      <button
-                        onClick={() => handleDeleteResource(res.id)}
-                        className="w-full border border-red-200 dark:border-red-800/40 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 font-bold py-2 px-4 rounded-xl text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        {t('btnDelete')}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditClick(res)}
+                          className="flex-1 border border-indigo-200 dark:border-indigo-800/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 font-bold py-2 px-4 rounded-xl text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteResource(res.id)}
+                          className="flex-1 border border-red-200 dark:border-red-800/40 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 font-bold py-2 px-4 rounded-xl text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          {t('btnDelete')}
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -384,8 +385,8 @@ const Navbar = ({ toggleSidebar }) => {
         </div>
       </div>
 
-      {/* Modern Overlay Action Modal ("Mini box pops up") */}
-      {selectedNotification && (
+      {/* Modern Overlay Action Modal — portaled to body for proper centering */}
+      {selectedNotification && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[150] p-4 animate-fadeIn">
           <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-md w-full border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden text-gray-800 dark:text-gray-100 flex flex-col transform transition-transform scale-100">
             
@@ -441,28 +442,31 @@ const Navbar = ({ toggleSidebar }) => {
               )}
 
               {selectedNotification.type === 'document' && selectedNotification.status === 'missing' && (
-                <div className="space-y-3 pt-2">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">
                       {lang === 'en' ? 'Google Drive Link' : 'গুগল ড্রাইভ লিংক'}
                     </label>
-                    <input
-                      type="url"
-                      placeholder="https://drive.google.com/..."
-                      value={docUrlInput}
-                      onChange={(e) => setDocUrlInput(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:outline-none transition-all dark:text-white"
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="url"
+                        placeholder="https://drive.google.com/..."
+                        value={docUrlInput}
+                        onChange={(e) => setDocUrlInput(e.target.value)}
+                        className="flex-1 min-w-0 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:outline-none transition-all dark:text-white"
+                      />
+                      <button
+                        disabled={isUpdating || !docUrlInput.trim()}
+                        onClick={() => handleSubmitDoc(selectedNotification.docType)}
+                        className="shrink-0 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all hover:scale-[1.02] active:scale-95 flex justify-center items-center gap-1.5"
+                      >
+                        {isUpdating ? (
+                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        ) : '📤'}
+                        <span>{lang === 'en' ? 'Submit' : 'জমা দিন'}</span>
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    disabled={isUpdating || !docUrlInput.trim()}
-                    onClick={() => handleSubmitDoc(selectedNotification.docType)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all hover:scale-[1.02] active:scale-95 flex justify-center items-center gap-2"
-                  >
-                    {isUpdating ? (
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    ) : '📤'} {lang === 'en' ? 'Submit Document Link' : 'ডকুমেন্ট লিঙ্ক জমা দিন'}
-                  </button>
                 </div>
               )}
 
@@ -506,7 +510,8 @@ const Navbar = ({ toggleSidebar }) => {
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </nav>
   );

@@ -26,21 +26,36 @@ const authenticateUser = async (req, res, next) => {
 };
 
 const requireAdmin = async (req, res, next) => {
-  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+  if (!req.user) {
+    console.log('[requireAdmin] No user on request object');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
   try {
-    const { data: customUser } = await supabase
+    const { data: customUser, error } = await supabase
       .from('users')
       .select('role')
       .eq('id', req.user.id)
       .single();
 
-    if (!customUser || customUser.role !== 'admin') {
-      return res.status(403).json({ error: 'Forbidden: Admin access required' });
+    if (error) {
+      console.error('[requireAdmin] Database error looking up user:', error);
+      return res.status(500).json({ error: `Internal query error: ${error.message}` });
+    }
+
+    if (!customUser) {
+      console.log('[requireAdmin] No user found in users table for ID:', req.user.id);
+      return res.status(403).json({ error: 'Forbidden: Admin profile not found' });
+    }
+
+    if (customUser.role !== 'admin') {
+      console.log(`[requireAdmin] User role is ${customUser.role}, not admin`);
+      return res.status(403).json({ error: `Forbidden: Admin access required (Your role is ${customUser.role})` });
     }
     
     next();
   } catch (err) {
+    console.error('[requireAdmin] Caught exception:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
