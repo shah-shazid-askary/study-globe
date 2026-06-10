@@ -3,19 +3,33 @@
   publish = "frontend/build"
   functions = "backend/functions"
 
+[build.environment]
+  NODE_VERSION = "20"
+
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["express", "cors", "dotenv", "serverless-http"]
+  external_node_modules = [
+    "express",
+    "cors",
+    "dotenv",
+    "serverless-http",
+    "bcrypt",
+    "@supabase/supabase-js",
+    "jsonwebtoken",
+    "@google/generative-ai",
+    "ollama"
+  ]
+
+[functions.api]
+  timeout = 26
 
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-[context.production.environment]
-  NODE_VERSION = "20"
