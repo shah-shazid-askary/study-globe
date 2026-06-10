@@ -1,5 +1,6 @@
 const supabase = require('../config/supabase');
 const { fetchUserMeta, buildAuthResponse } = require('../utils/authResponse');
+const { resolveFrontendUrl } = require('../utils/frontendUrl');
 
 const ensureSupabaseConfigured = (res) => {
   if (!supabase.isConfigured()) {
@@ -133,7 +134,7 @@ const requestPasswordReset = async (req, res) => {
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.FRONTEND_URL || req.headers.origin || 'http://localhost:3000'}/reset-password`,
+      redirectTo: `${resolveFrontendUrl(req.headers.origin)}/reset-password`,
     });
 
     if (error) {

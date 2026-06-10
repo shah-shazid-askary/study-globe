@@ -1,4 +1,7 @@
 {
+  "env": {
+    "SUPABASE_URL": "https://fgwkzweywzmpnebnrwvm.supabase.co"
+  },
   "experimentalServices": {
     "frontend": {
       "root": "frontend",

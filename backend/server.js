@@ -1,6 +1,9 @@
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+// On Vercel, env vars come from the dashboard — do not load local .env files
+if (!process.env.VERCEL) {
+  require('dotenv').config({ path: path.join(__dirname, '.env') });
+  require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+}
 const express = require('express');
 const cors = require('cors');
 
@@ -30,6 +33,10 @@ const allowedOrigins = new Set(
     process.env.DEPLOY_URL,
     process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`,
     process.env.VERCEL_BRANCH_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL &&
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL.startsWith('http')
+        ? process.env.VERCEL_PROJECT_PRODUCTION_URL
+        : `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`),
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:8888',
@@ -73,6 +80,12 @@ apiRouter.get('/health', (req, res) => {
   res.json({
     status: 'OK',
     supabaseConfigured: supabase.isConfigured(),
+    env: {
+      SUPABASE_URL: Boolean(process.env.SUPABASE_URL?.trim()),
+      SUPABASE_SERVICE_KEY: Boolean(process.env.SUPABASE_SERVICE_KEY?.trim()),
+      SUPABASE_SERVICE_ROLE_KEY: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
+      VERCEL: Boolean(process.env.VERCEL),
+    },
   });
 });
 
