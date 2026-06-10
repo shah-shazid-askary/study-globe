@@ -2,7 +2,6 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { prefetchRoute } from '../routes/lazyPages';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const { isAuthenticated, isAdmin } = useAuth();
@@ -120,8 +119,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               <li key={link.to}>
                 <NavLink
                   to={link.to}
-                  onMouseEnter={() => prefetchRoute(link.to)}
-                  onFocus={() => prefetchRoute(link.to)}
                   onClick={() => {
                     // Close sidebar on mobile after clicking
                     if (window.innerWidth < 1024) toggleSidebar();
@@ -149,8 +146,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                 <div className="mt-2">
                   <NavLink
                     to="/admin"
-                    onMouseEnter={() => prefetchRoute('/admin')}
-                    onFocus={() => prefetchRoute('/admin')}
                     onClick={() => { if (window.innerWidth < 1024) toggleSidebar(); }}
                     className={({ isActive }) =>
                       `flex items-center p-2.5 rounded-xl text-xs font-bold transition-all duration-300 hover:scale-[1.01] ${

@@ -87,9 +87,6 @@ const Universities = () => {
       if (cid) params.country_id = cid;
       const res = await universitiesAPI.getAll(params);
       setUniversities(res.data);
-      if (!search?.trim() && !cid) {
-        setDbUniversities(res.data.sort((a, b) => a.Name.localeCompare(b.Name)));
-      }
     } catch (err) {
       setError('Failed to load universities. Please try again.');
     } finally {
@@ -97,8 +94,16 @@ const Universities = () => {
     }
   };
 
+  const fetchAllUniversities = async () => {
+    try {
+      const res = await universitiesAPI.getAll();
+      setDbUniversities(res.data.sort((a, b) => a.Name.localeCompare(b.Name)));
+    } catch (err) {}
+  };
+
   useEffect(() => {
     fetchUniversities('');
+    fetchAllUniversities();
     const loadProfile = async () => {
       try {
         const res = await profileAPI.get();
