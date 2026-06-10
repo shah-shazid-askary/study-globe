@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { programsAPI } from '../services/api';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useProgramsQuery } from '../hooks/useAppQueries';
 
 /* ── Degree colour system ─────────────────────────────── */
 const degreeMeta = {
@@ -66,41 +66,23 @@ const DegreeIcon = ({ type, className = 'w-4 h-4' }) => {
 
 const Programs = () => {
   const { t, lang } = useLanguage();
-  const [programs, setPrograms] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [filters, setFilters] = useState({ degree_level: '', field: '' });
   const [dbFields, setDbFields] = useState([]);
 
-  const fetchPrograms = async (f) => {
-    setLoading(true);
-    setError('');
-    try {
-      const params = {};
-      if (f.degree_level) params.degree_level = f.degree_level;
-      if (f.field) params.field = f.field;
-      const res = await programsAPI.getAll(params);
-      setPrograms(res.data);
-    } catch (err) {
-      setError('Failed to load programs.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: programs = [], isLoading: loading, isError } = useProgramsQuery(filters);
 
-  const fetchFields = async () => {
-    try {
-      const res = await programsAPI.getAll({});
-      const all = res.data.map(p => p.field).filter(Boolean);
+  useEffect(() => {
+    if (programs.length && !filters.degree_level && !filters.field) {
+      const all = programs.map((p) => p.field).filter(Boolean);
       setDbFields([...new Set(all)].sort());
-    } catch (err) {}
-  };
+    }
+  }, [programs, filters.degree_level, filters.field]);
 
-  useEffect(() => { fetchPrograms(filters); fetchFields(); }, []);
+  const error = isError ? 'Failed to load programs.' : '';
 
-  const handleFilter = (e) => { e.preventDefault(); fetchPrograms(filters); };
+  const handleFilter = (e) => { e.preventDefault(); };
   const handleChange = (e) => setFilters({ ...filters, [e.target.name]: e.target.value });
-  const handleClear = () => { const c = { degree_level: '', field: '' }; setFilters(c); fetchPrograms(c); };
+  const handleClear = () => setFilters({ degree_level: '', field: '' });
 
   const activeMeta = filters.degree_level ? degreeMeta[filters.degree_level] : null;
 
@@ -139,7 +121,7 @@ const Programs = () => {
             {Object.entries(degreeMeta).map(([level, meta]) => (
               <button
                 key={level}
-                onClick={() => { const c = { ...filters, degree_level: filters.degree_level === level ? '' : level }; setFilters(c); fetchPrograms(c); }}
+                onClick={() => { const c = { ...filters, degree_level: filters.degree_level === level ? '' : level }; setFilters(c); }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
                   filters.degree_level === level
                     ? meta.activePill
@@ -213,7 +195,7 @@ const Programs = () => {
               <span className={`inline-flex items-center gap-1.5 ${degreeMeta[filters.degree_level]?.badge} text-xs font-bold px-3 py-1 rounded-full`}>
                 <DegreeIcon type={filters.degree_level} className="w-3.5 h-3.5 shrink-0" />
                 <span>{filters.degree_level}</span>
-                <button onClick={() => { const c = { ...filters, degree_level: '' }; setFilters(c); fetchPrograms(c); }} className="ml-0.5 hover:opacity-70">×</button>
+                <button onClick={() => { const c = { ...filters, degree_level: '' }; setFilters(c); }} className="ml-0.5 hover:opacity-70">×</button>
               </span>
             )}
             {filters.field && (
@@ -222,7 +204,7 @@ const Programs = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
                 <span>{filters.field}</span>
-                <button onClick={() => { const c = { ...filters, field: '' }; setFilters(c); fetchPrograms(c); }} className="hover:opacity-70">×</button>
+                <button onClick={() => { const c = { ...filters, field: '' }; setFilters(c); }} className="hover:opacity-70">×</button>
               </span>
             )}
           </div>

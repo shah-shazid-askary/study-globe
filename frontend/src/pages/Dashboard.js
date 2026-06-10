@@ -1,27 +1,59 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useUserData } from '../context/UserDataContext';
 import { useLanguage } from '../context/LanguageContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { profileAPI, tasksAPI, documentsAPI, predepartureAPI } from '../services/api';
+import { profileAPI } from '../services/api';
 import AccordionCard from '../components/AccordionCard';
-import SopReviewSection from '../components/SopReviewSection';
-import LorReviewSection from '../components/LorReviewSection';
+
+const SopReviewSection = React.lazy(() => import('../components/SopReviewSection'));
+const LorReviewSection = React.lazy(() => import('../components/LorReviewSection'));
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { profile, tasks, documents, predeparture, loading: loadingMetrics } = useUserData();
   const { t, lang } = useLanguage();
   const name = user?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Student';
 
-  // Metrics states
-  const [profileProgress, setProfileProgress] = useState(0);
-  const [taskProgress, setTaskProgress] = useState({ completed: 0, total: 0 });
-  const [docProgress, setDocProgress] = useState({ submitted: 0, total: 5 });
-  const [prepProgress, setPrepProgress] = useState({ completed: 0, total: 5 });
+  const profileProgress = useMemo(() => {
+    if (!profile) return 0;
+    const fields = [
+      profile.full_name,
+      profile.date_of_birth,
+      profile.phone,
+      profile.current_education_level,
+      profile.field_of_interest,
+      profile.preferred_countries,
+      profile.budget_range,
+      profile.target_intake,
+    ];
+    const filled = fields.filter((f) => {
+      if (Array.isArray(f)) return f.length > 0;
+      return f !== null && f !== undefined && String(f).trim() !== '';
+    }).length;
+    return Math.round((filled / fields.length) * 100);
+  }, [profile]);
+
+  const taskProgress = useMemo(() => {
+    const tList = tasks || [];
+    return { completed: tList.filter((task) => task.status === 'completed').length, total: tList.length };
+  }, [tasks]);
+
+  const docProgress = useMemo(() => {
+    const dList = documents || [];
+    const uploadedDocs = dList.filter((d) => d.status === 'uploaded' || d.status === 'verified').length;
+    return { submitted: uploadedDocs, total: 5 };
+  }, [documents]);
+
+  const prepProgress = useMemo(() => {
+    const prList = predeparture || [];
+    const completedPrep = prList.filter((item) => item.is_completed).length;
+    return { completed: completedPrep, total: 5 };
+  }, [predeparture]);
   
   // Dashboard & Roadmap loading/ui states
-  const [loadingMetrics, setLoadingMetrics] = useState(true);
   const [loadingRoadmap, setLoadingRoadmap] = useState(false);
   const [roadmapError, setRoadmapError] = useState('');
   const [roadmapResult, setRoadmapResult] = useState('');
@@ -29,62 +61,6 @@ const Dashboard = () => {
   // Collapsible accordion visibility states
   const [isSopOpen, setIsSopOpen] = useState(false);
   const [isLorOpen, setIsLorOpen] = useState(false);
-
-  useEffect(() => {
-    const loadDashboardMetrics = async () => {
-      try {
-        setLoadingMetrics(true);
-        const [profileRes, tasksRes, docsRes, prepRes] = await Promise.all([
-          profileAPI.get().catch(() => ({ data: {} })),
-          tasksAPI.getAll().catch(() => ({ data: [] })),
-          documentsAPI.getAll().catch(() => ({ data: [] })),
-          predepartureAPI.get().catch(() => ({ data: [] })),
-        ]);
-
-        // 1. Profile completeness calculation
-        const p = profileRes.data;
-        if (p) {
-          const fields = [
-            p.full_name,
-            p.date_of_birth,
-            p.phone,
-            p.current_education_level,
-            p.field_of_interest,
-            p.preferred_countries,
-            p.budget_range,
-            p.target_intake
-          ];
-          const filled = fields.filter(f => {
-            if (Array.isArray(f)) return f.length > 0;
-            return f !== null && f !== undefined && String(f).trim() !== '';
-          }).length;
-          setProfileProgress(Math.round((filled / fields.length) * 100));
-        }
-
-        // 2. Application Planner tasks calculations
-        const tList = tasksRes.data || [];
-        const completedTasks = tList.filter(task => task.status === 'completed').length;
-        setTaskProgress({ completed: completedTasks, total: tList.length });
-
-        // 3. Documents submitted
-        const dList = docsRes.data || [];
-        const uploadedDocs = dList.filter(d => d.status === 'uploaded' || d.status === 'verified').length;
-        setDocProgress({ submitted: uploadedDocs, total: 5 }); // 5 standard documents
-
-        // 4. Pre-departure prep
-        const prList = prepRes.data || [];
-        const completedPrep = prList.filter(item => item.is_completed).length;
-        setPrepProgress({ completed: completedPrep, total: 5 }); // 5 travel checkpoints
-
-      } catch (err) {
-        console.error('Error loading dashboard metrics:', err);
-      } finally {
-        setLoadingMetrics(false);
-      }
-    };
-
-    loadDashboardMetrics();
-  }, []);
 
   const overallCompleteness = Math.round(
     (profileProgress * 0.25) +
@@ -573,7 +549,11 @@ const Dashboard = () => {
             }
             gradientClass="bg-gradient-to-br from-blue-500 via-indigo-500 to-indigo-700"
           >
-            <SopReviewSection />
+            {isSopOpen && (
+              <Suspense fallback={<div className="py-6 text-center text-sm text-gray-500">Loading SOP reviewer…</div>}>
+                <SopReviewSection />
+              </Suspense>
+            )}
           </AccordionCard>
 
           {/* Letter of Recommendation (LOR) AI Review Section */}
@@ -595,7 +575,11 @@ const Dashboard = () => {
             }
             gradientClass="bg-gradient-to-br from-violet-500 via-purple-500 to-purple-700"
           >
-            <LorReviewSection />
+            {isLorOpen && (
+              <Suspense fallback={<div className="py-6 text-center text-sm text-gray-500">Loading LOR reviewer…</div>}>
+                <LorReviewSection />
+              </Suspense>
+            )}
           </AccordionCard>
         </>
       )}

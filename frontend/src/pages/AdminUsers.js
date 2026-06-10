@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { usersAPI } from '../services/api';
+import { useUsersQuery } from '../hooks/useAppQueries';
+import { queryKeys } from '../lib/queryClient';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 
@@ -128,24 +131,13 @@ const ConfirmModal = ({ modal, onConfirm, onCancel }) => {
 };
 
 const AdminUsers = () => {
-  const [users, setUsers]       = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState('');
-  const [modal, setModal]       = useState(null);   // { title, message, danger, infoOnly, confirmLabel, onConfirm }
+  const queryClient = useQueryClient();
+  const { data: users = [], isLoading: loading, isError } = useUsersQuery();
+  const error = isError ? 'Failed to load users from the server.' : '';
+  const [modal, setModal]       = useState(null);
   const { user: currentUser }   = useAuth();
 
-  const fetchUsers = async () => {
-    try {
-      const res = await usersAPI.getAll();
-      setUsers(res.data);
-    } catch (err) {
-      setError('Failed to load users from the server.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchUsers(); }, []);
+  const refreshUsers = () => queryClient.invalidateQueries({ queryKey: queryKeys.users });
 
   const openModal = (config) => setModal(config);
   const closeModal = () => setModal(null);
@@ -173,7 +165,7 @@ const AdminUsers = () => {
         closeModal();
         try {
           await usersAPI.updateRole(userId, newRole);
-          fetchUsers();
+          refreshUsers();
         } catch (err) {
           openModal({
             title: 'Update Failed',

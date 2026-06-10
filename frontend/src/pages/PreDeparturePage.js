@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { predepartureAPI } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useUserData } from '../context/UserDataContext';
 
 const CHECKLIST_ICONS = {
   accommodation: (
@@ -40,8 +41,8 @@ const ITEM_COLORS = [
 
 const PreDeparturePage = () => {
   const { t, lang } = useLanguage();
-  const [completedItems, setCompletedItems] = useState({});
-  const [loading, setLoading] = useState(true);
+  const { predeparture, loading, refreshUserData } = useUserData();
+  const [optimistic, setOptimistic] = useState(null);
 
   const checklistItems = [
     { key: 'accommodation', label: t('prepAccommodation'), desc: lang === 'en' ? 'Book student hostel or shared apartment near your campus.' : 'আপনার ক্যাম্পাসের কাছাকাছি শিক্ষার্থী হোস্টেল বা যৌথ অ্যাপার্টমেন্ট বুক করুন।' },
@@ -51,30 +52,24 @@ const PreDeparturePage = () => {
     { key: 'baggage_essentials', label: t('prepBaggage'), desc: lang === 'en' ? 'Pack warm clothes, academic transcripts, and emergency medicine.' : 'উষ্ণ পোশাক, একাডেমিক সার্টিফিকেট এবং জরুরী ওষুধ প্যাক করুন।' },
   ];
 
-  useEffect(() => { fetchPreDeparture(); }, []);
-
-  const fetchPreDeparture = async () => {
-    try {
-      setLoading(true);
-      const res = await predepartureAPI.get();
-      const mapped = {};
-      res.data.forEach(item => { mapped[item.item_key] = item.is_completed; });
-      setCompletedItems(mapped);
-    } catch (err) {
-      console.error('Failed to fetch pre-departure checklist:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const completedItems = useMemo(() => {
+    const mapped = { ...(optimistic || {}) };
+    (predeparture || []).forEach((item) => {
+      mapped[item.item_key] = item.is_completed;
+    });
+    return mapped;
+  }, [predeparture, optimistic]);
 
   const handleToggleItem = async (itemKey) => {
     const nextVal = !completedItems[itemKey];
-    setCompletedItems(prev => ({ ...prev, [itemKey]: nextVal }));
+    setOptimistic((prev) => ({ ...(prev || {}), [itemKey]: nextVal }));
     try {
       await predepartureAPI.update({ item_key: itemKey, is_completed: nextVal });
+      refreshUserData();
+      setOptimistic(null);
     } catch (err) {
       console.error('Failed to toggle pre-departure item:', err);
-      setCompletedItems(prev => ({ ...prev, [itemKey]: !nextVal }));
+      setOptimistic((prev) => ({ ...(prev || {}), [itemKey]: !nextVal }));
     }
   };
 
@@ -189,7 +184,6 @@ const PreDeparturePage = () => {
                       : 'hover:bg-gray-50/70 dark:hover:bg-gray-700/20'
                   }`}
                 >
-                  {/* Icon */}
                   <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${
                     isChecked
                       ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
@@ -202,7 +196,6 @@ const PreDeparturePage = () => {
                     ) : Icon}
                   </div>
 
-                  {/* Content */}
                   <div className="flex-1 min-w-0">
                     <h3 className={`font-bold text-base transition-all ${
                       isChecked
@@ -220,7 +213,6 @@ const PreDeparturePage = () => {
                     </p>
                   </div>
 
-                  {/* Toggle indicator */}
                   <div className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
                     isChecked
                       ? 'bg-emerald-500 border-emerald-500'
@@ -238,7 +230,6 @@ const PreDeparturePage = () => {
           </div>
         )}
 
-        {/* Footer */}
         {!loading && progressPercent === 100 && (
           <div className="px-6 py-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border-t border-emerald-100 dark:border-emerald-800/30 flex items-center gap-3">
             <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/40 rounded-xl flex items-center justify-center">

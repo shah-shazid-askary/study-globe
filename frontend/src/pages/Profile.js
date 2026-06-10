@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { profileAPI, countriesAPI, programsAPI } from '../services/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { profileAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useProfileQuery, useCountriesQuery, useProgramsQuery } from '../hooks/useAppQueries';
+import { queryKeys } from '../lib/queryClient';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import MultiSelectSearch from '../components/MultiSelectSearch';
@@ -11,6 +14,8 @@ const Profile = () => {
   const { user, updateUser } = useAuth();
   const { lang } = useLanguage();
   const location = useLocation();
+  const queryClient = useQueryClient();
+
   const [formData, setFormData] = useState({
     full_name: '',
     date_of_birth: '',
@@ -21,49 +26,38 @@ const Profile = () => {
     budget_range: '',
     target_intake: '',
   });
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [dbCountries, setDbCountries] = useState([]);
-  const [dbFields, setDbFields] = useState([]);
   const [recommendations, setRecommendations] = useState('');
   const [loadingAi, setLoadingAi] = useState(false);
   const [aiError, setAiError] = useState('');
 
+  const { data: profileData, isLoading: loadingProfile } = useProfileQuery();
+  const { data: dbCountries = [] } = useCountriesQuery();
+  const { data: allPrograms = [] } = useProgramsQuery({});
+  const dbFields = useMemo(() => {
+    const allFields = allPrograms.map((p) => p.field).filter(Boolean);
+    return [...new Set(allFields)].sort();
+  }, [allPrograms]);
+
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const [profileRes, countriesRes, programsRes] = await Promise.all([
-          profileAPI.get(),
-          countriesAPI.getAll().catch(() => ({ data: [] })),
-          programsAPI.getAll().catch(() => ({ data: [] }))
-        ]);
-        setDbCountries(countriesRes.data || []);
-        const allFields = (programsRes.data || []).map(p => p.field).filter(Boolean);
-        setDbFields([...new Set(allFields)].sort());
-        const p = profileRes.data;
-        if (p && Object.keys(p).length > 0) {
-          setFormData({
-            full_name: p.full_name || '',
-            date_of_birth: p.date_of_birth || '',
-            phone: p.phone || '',
-            current_education_level: p.current_education_level || '',
-            field_of_interest: p.field_of_interest || '',
-            preferred_countries: Array.isArray(p.preferred_countries)
-              ? p.preferred_countries.join(', ')
-              : (p.preferred_countries || ''),
-            budget_range: p.budget_range || '',
-            target_intake: p.target_intake || '',
-          });
-        }
-      } catch (err) {
-        setMessage({ type: 'error', text: lang === 'en' ? 'Failed to load profile.' : 'প্রোফাইল লোড করতে ব্যর্থ হয়েছে।' });
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProfile();
-  }, []);
+    if (profileData && Object.keys(profileData).length > 0) {
+      setFormData({
+        full_name: profileData.full_name || '',
+        date_of_birth: profileData.date_of_birth || '',
+        phone: profileData.phone || '',
+        current_education_level: profileData.current_education_level || '',
+        field_of_interest: profileData.field_of_interest || '',
+        preferred_countries: Array.isArray(profileData.preferred_countries)
+          ? profileData.preferred_countries.join(', ')
+          : (profileData.preferred_countries || ''),
+        budget_range: profileData.budget_range || '',
+        target_intake: profileData.target_intake || '',
+      });
+    }
+  }, [profileData]);
+
+  const loading = loadingProfile;
 
   useEffect(() => {
     if (!loading && location.hash === '#generate-plan') {
@@ -86,6 +80,7 @@ const Profile = () => {
     setMessage({ type: '', text: '' });
     try {
       await profileAPI.update(formData);
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile });
       if (formData.full_name && formData.full_name.trim()) {
         updateUser({ full_name: formData.full_name.trim() });
       }

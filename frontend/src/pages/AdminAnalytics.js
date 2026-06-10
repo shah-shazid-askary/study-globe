@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { analyticsAPI } from '../services/api';
+import React from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAnalyticsQuery } from '../hooks/useAppQueries';
+import { queryKeys } from '../lib/queryClient';
 
 /* ── Modern SVG icons ──────────────────────────────────────── */
 const UsersIcon = ({ className = 'w-6 h-6' }) => (
@@ -61,27 +63,12 @@ const metricCards = [
 ];
 
 const AdminAnalytics = () => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const queryClient = useQueryClient();
+  const { data, isLoading: loading, dataUpdatedAt } = useAnalyticsQuery();
+  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
 
-  const fetchMetrics = async () => {
-    try {
-      const res = await analyticsAPI.getSystemMetrics();
-      setData(res.data);
-      setLastUpdated(new Date());
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchMetrics();
-    const interval = setInterval(fetchMetrics, 15000);
-    return () => clearInterval(interval);
-  }, []);
+  const refreshMetrics = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
 
   if (loading || !data) return (
     <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -124,7 +111,7 @@ const AdminAnalytics = () => {
             )}
           </div>
           <button
-            onClick={fetchMetrics}
+            onClick={refreshMetrics}
             className="ml-auto flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all"
           >
             <RefreshIcon className="w-3.5 h-3.5" />

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { countriesAPI, guidelinesAPI } from '../services/api';
+import { guidelinesAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useCountriesQuery } from '../hooks/useAppQueries';
 
 const getCountryFlagUrl = (countryName) => {
   const name = countryName?.toLowerCase()?.trim() || '';
@@ -30,10 +31,9 @@ const getCountryFlagUrl = (countryName) => {
 const Countries = () => {
   const { isAdmin } = useAuth();
   const { t, lang } = useLanguage();
-  const [allCountries, setAllCountries] = useState([]);
+  const { data: allCountries = [], isLoading: loading, isError } = useCountriesQuery();
   const [searchText, setSearchText] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const error = isError ? 'Failed to load countries. Please try again.' : '';
   const inputRef = useRef(null);
 
   const [selectedCountry, setSelectedCountry] = useState(null);
@@ -42,20 +42,6 @@ const Countries = () => {
   const [activeTab, setActiveTab] = useState('visa');
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ visa_rules: '', work_permit_rules: '', living_costs: '', general_requirements: '' });
-
-  useEffect(() => {
-    const fetchCountries = async () => {
-      try {
-        const res = await countriesAPI.getAll();
-        setAllCountries(res.data);
-      } catch (err) {
-        setError('Failed to load countries. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCountries();
-  }, []);
 
   const handleOpenGuidelines = async (country) => {
     setSelectedCountry(country);

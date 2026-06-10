@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { universitiesAPI, profileAPI } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useProfileQuery, useUniversityQuery } from '../hooks/useAppQueries';
 
 // FIX: Added tabs for Intake (FR-07), Language (FR-08), Scholarships (FR-09) — all were missing
 const TABS = [
@@ -15,29 +15,11 @@ const TABS = [
 const UniversityDetails = () => {
   const { id } = useParams();
   const { lang } = useLanguage();
-  const [university, setUniversity] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { data: university, isLoading: loading, isError } = useUniversityQuery(id);
+  const { data: profile = null } = useProfileQuery();
   const [activeTab, setActiveTab] = useState('Overview');
 
-  useEffect(() => {
-    const loadDetailsAndProfile = async () => {
-      try {
-        const [uniRes, profileRes] = await Promise.all([
-          universitiesAPI.getById(id),
-          profileAPI.get().catch(() => ({ data: null }))
-        ]);
-        setUniversity(uniRes.data);
-        setProfile(profileRes.data);
-      } catch (err) {
-        setError('University not found or failed to load.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadDetailsAndProfile();
-  }, [id]);
+  const error = isError ? 'University not found or failed to load.' : '';
 
   if (loading) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
   if (error) return <div className="bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/30 rounded-lg p-4">{error}</div>;

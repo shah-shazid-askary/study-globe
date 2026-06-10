@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { tasksAPI, documentsAPI, aiAPI, profileAPI } from '../services/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { tasksAPI, documentsAPI, aiAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useUserData } from '../context/UserDataContext';
 import { useLanguage } from '../context/LanguageContext';
+import { queryKeys } from '../lib/queryClient';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -44,22 +47,17 @@ const getDocIcon = (docType, className = "w-6 h-6") => {
 
 const ApplicationsPage = () => {
   const { user, isAdmin } = useAuth();
+  const { profile, tasks, documents, loading: loadingUserData, refreshUserData } = useUserData();
+  const queryClient = useQueryClient();
   const { t, lang } = useLanguage();
 
   // Application Tasks State
-  const [tasks, setTasks] = useState([]);
-  const [loadingTasks, setLoadingTasks] = useState(true);
   const [showAddTask, setShowAddTask] = useState(false);
   const [newTask, setNewTask] = useState({ title: '', description: '', due_date: '', status: 'pending' });
   const [taskFilter, setTaskFilter] = useState('all');
 
   // Document Checklist State
-  const [documents, setDocuments] = useState([]);
-  const [loadingDocs, setLoadingDocs] = useState(true);
-  const [docInputs, setDocInputs] = useState({}); // { [doc_type]: google_drive_url }
-
-  // SOP Reviewer State
-  const [profile, setProfile] = useState(null);
+  const [docInputs, setDocInputs] = useState({});
   const [showSopReviewer, setShowSopReviewer] = useState(false);
   const [sopText, setSopText] = useState('');
   const [loadingReview, setLoadingReview] = useState(false);
@@ -88,53 +86,19 @@ const ApplicationsPage = () => {
     'Passport Copy'
   ];
 
+  const loadingTasks = loadingUserData;
+  const loadingDocs = loadingUserData;
+
   useEffect(() => {
-    fetchTasks();
-    fetchDocuments();
-    fetchProfile();
-  }, []);
+    const inputs = {};
+    (documents || []).forEach((doc) => {
+      inputs[doc.document_type] = doc.google_drive_url || '';
+    });
+    setDocInputs(inputs);
+  }, [documents]);
 
-  // Fetch Profile for SOP Review targets
-  const fetchProfile = async () => {
-    try {
-      const res = await profileAPI.get();
-      setProfile(res.data);
-    } catch (err) {
-      console.error('Failed to retrieve profile for target mapping:', err);
-    }
-  };
-
-  // Fetch Tasks
-  const fetchTasks = async () => {
-    try {
-      setLoadingTasks(true);
-      const res = await tasksAPI.getAll();
-      setTasks(res.data);
-    } catch (err) {
-      console.error('Failed to fetch tasks:', err);
-    } finally {
-      setLoadingTasks(false);
-    }
-  };
-
-  // Fetch Documents
-  const fetchDocuments = async () => {
-    try {
-      setLoadingDocs(true);
-      const res = await documentsAPI.getAll();
-      setDocuments(res.data);
-      // Pre-fill inputs with existing drive URLs
-      const inputs = {};
-      res.data.forEach(doc => {
-        inputs[doc.document_type] = doc.google_drive_url || '';
-      });
-      setDocInputs(inputs);
-    } catch (err) {
-      console.error('Failed to fetch documents:', err);
-    } finally {
-      setLoadingDocs(false);
-    }
-  };
+  const invalidateTasks = () => queryClient.invalidateQueries({ queryKey: queryKeys.tasks });
+  const invalidateDocuments = () => queryClient.invalidateQueries({ queryKey: queryKeys.documents });
 
   // Task Actions
   const handleCreateTask = async (e) => {
@@ -145,7 +109,8 @@ const ApplicationsPage = () => {
       await tasksAPI.create(newTask);
       setNewTask({ title: '', description: '', due_date: '', status: 'pending' });
       setShowAddTask(false);
-      fetchTasks();
+      invalidateTasks();
+      refreshUserData();
       showNotification('Task added successfully!');
     } catch (err) {
       setErrorMsg('Failed to create task');
@@ -156,7 +121,8 @@ const ApplicationsPage = () => {
   const handleUpdateStatus = async (task, newStatus) => {
     try {
       await tasksAPI.update(task.id, { ...task, status: newStatus });
-      fetchTasks();
+      invalidateTasks();
+      refreshUserData();
       showNotification('Task updated successfully!');
     } catch (err) {
       console.error('Failed to update status:', err);
@@ -172,7 +138,8 @@ const ApplicationsPage = () => {
     if (!window.confirm(lang === 'en' ? 'Are you sure you want to delete this task?' : 'আপনি কি নিশ্চিত যে আপনি এই কাজটি মুছে ফেলতে চান?')) return;
     try {
       await tasksAPI.delete(id);
-      fetchTasks();
+      invalidateTasks();
+      refreshUserData();
       showNotification('Task deleted successfully!');
     } catch (err) {
       console.error('Failed to delete task:', err);
@@ -190,7 +157,8 @@ const ApplicationsPage = () => {
 
     try {
       await documentsAPI.submit({ document_type: docType, google_drive_url: url });
-      fetchDocuments();
+      invalidateDocuments();
+      refreshUserData();
       showNotification(`${docType} submitted successfully!`);
     } catch (err) {
       setErrorMsg(err.response?.data?.error || 'Failed to submit document');
@@ -201,7 +169,8 @@ const ApplicationsPage = () => {
   const handleVerifyDoc = async (docId, newStatus) => {
     try {
       await documentsAPI.verify(docId, newStatus);
-      fetchDocuments();
+      invalidateDocuments();
+      refreshUserData();
       showNotification(`Document status updated to ${newStatus}`);
     } catch (err) {
       console.error('Verification error:', err);

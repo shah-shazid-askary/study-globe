@@ -1,18 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
+import { useUserData } from '../context/UserDataContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { tasksAPI, documentsAPI, profileAPI, predepartureAPI } from '../services/api';
+import { tasksAPI, documentsAPI } from '../services/api';
+import { buildNotifications } from '../utils/buildNotifications';
 
 const Navbar = ({ toggleSidebar }) => {
   const { isAuthenticated, user, logout } = useAuth();
+  const { profile, tasks, documents, predeparture, refreshUserData } = useUserData();
   const { theme, toggleTheme } = useTheme();
   const { lang, toggleLanguage, t } = useLanguage();
   const navigate = useNavigate();
 
-  const [notifications, setNotifications] = useState([]);
   const [isOpenNotifications, setIsOpenNotifications] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [docUrlInput, setDocUrlInput] = useState('');
@@ -32,146 +34,10 @@ const Navbar = ({ toggleSidebar }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchNotifications = async () => {
-    if (!isAuthenticated) return;
-    try {
-      const [tasksRes, docsRes, profileRes, prepRes] = await Promise.all([
-        tasksAPI.getAll().catch(() => ({ data: [] })),
-        documentsAPI.getAll().catch(() => ({ data: [] })),
-        profileAPI.get().catch(() => ({ data: null })),
-        predepartureAPI.get().catch(() => ({ data: [] }))
-      ]);
-
-      const list = [];
-
-      // 1. Process tasks (deadlines)
-      const tasks = tasksRes.data || [];
-      tasks.forEach(task => {
-        if (task.status !== 'completed' && task.due_date) {
-          const due = new Date(task.due_date);
-          const diffTime = due - new Date();
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          
-          if (diffDays <= 7) {
-            list.push({
-              id: `task-${task.id}`,
-              title: lang === 'en' ? 'Upcoming Deadline' : 'আসন্ন শেষ সময়',
-              detail: lang === 'en' 
-                ? `Task "${task.title}" is due on ${task.due_date}` 
-                : `কাজের শেষ সময় ${task.due_date} ("${task.title}")`,
-              type: 'task',
-              isUrgent: diffDays <= 2,
-              date: task.due_date,
-              taskObj: task
-            });
-          }
-        }
-      });
-
-      // 2. Process documents
-      const docs = docsRes.data || [];
-      const requiredTypes = [
-        'Statement of Purpose (SOP)', 
-        'Letter of Recommendation 1 (LOR 1)', 
-        'Letter of Recommendation 2 (LOR 2)', 
-        'Academic Transcript', 
-        'Passport Copy'
-      ];
-      
-      requiredTypes.forEach(docType => {
-        const found = docs.find(d => d.document_type === docType);
-        if (!found || found.status === 'missing') {
-          list.push({
-            id: `doc-missing-${docType}`,
-            title: lang === 'en' ? 'Missing Document' : 'অনুপস্থিত নথিপত্র',
-            detail: lang === 'en' 
-              ? `Please upload your ${docType}` 
-              : `দয়া করে আপনার ${docType} আপলোড করুন`,
-            type: 'document',
-            status: 'missing',
-            docType: docType,
-            isUrgent: false
-          });
-        } else if (found.status === 'uploaded') {
-          list.push({
-            id: `doc-verify-${found.id}`,
-            title: lang === 'en' ? 'Verification Pending' : 'যাচাইকরণ পেন্ডিং',
-            detail: lang === 'en' 
-              ? `${docType} is uploaded and waiting for review` 
-              : `${docType} আপলোড করা হয়েছে এবং যাচাইয়ের অপেক্ষায় আছে`,
-            type: 'document',
-            status: 'uploaded',
-            docType: docType,
-            isUrgent: false
-          });
-        }
-      });
-
-      // 3. Process profile completeness
-      const p = profileRes?.data;
-      if (p) {
-        const fields = [
-          { name: 'Full Name', val: p.full_name },
-          { name: 'Date of Birth', val: p.date_of_birth },
-          { name: 'Phone', val: p.phone },
-          { name: 'Education Level', val: p.current_education_level },
-          { name: 'Field of Interest', val: p.field_of_interest },
-          { name: 'Preferred Countries', val: p.preferred_countries },
-          { name: 'Budget Range', val: p.budget_range },
-          { name: 'Target Intake', val: p.target_intake }
-        ];
-        const missingFields = fields.filter(f => {
-          if (Array.isArray(f.val)) return f.val.length === 0;
-          return f.val === null || f.val === undefined || String(f.val).trim() === '';
-        }).map(f => f.name);
-
-        if (missingFields.length > 0) {
-          const pct = Math.round(((fields.length - missingFields.length) / fields.length) * 100);
-          list.push({
-            id: 'profile-incomplete',
-            title: lang === 'en' ? 'Profile Incomplete' : 'প্রোফাইল অসম্পূর্ণ',
-            detail: lang === 'en'
-              ? `Your profile is only ${pct}% complete. Missing details required for AI admission roadmaps.`
-              : `আপনার প্রোফাইল মাত্র ${pct}% সম্পূর্ণ। এআই রোডম্যাপ পাওয়ার জন্য প্রয়োজনীয় বিবরণগুলি যুক্ত করুন।`,
-            type: 'profile',
-            isUrgent: false,
-            missingFields: missingFields,
-            pct: pct
-          });
-        }
-      }
-
-      // 4. Process pre-departure tasks
-      const prepItems = prepRes.data || [];
-      const incompletePrep = prepItems.filter(item => !item.is_completed);
-      incompletePrep.forEach(item => {
-        list.push({
-          id: `prep-${item.id}`,
-          title: lang === 'en' ? 'Travel Prep Pending' : 'ভ্রমণ প্রস্তুতি পেন্ডিং',
-          detail: lang === 'en'
-            ? `Reminder: Complete step "${item.title}" for your departure checklist.`
-            : `অনুস্মারক: আপনার ভ্রমণ চেকলিস্টের "${item.title}" ধাপটি সম্পন্ন করুন।`,
-          type: 'predeparture',
-          isUrgent: false,
-          prepItem: item
-        });
-      });
-
-      setNotifications(list);
-    } catch (err) {
-      console.error('Failed to fetch notifications:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchNotifications();
-      const timer = setInterval(fetchNotifications, 30000);
-      return () => clearInterval(timer);
-    } else {
-      setNotifications([]);
-    }
-  }, [isAuthenticated, lang]);
+  const notifications = useMemo(() => {
+    if (!isAuthenticated) return [];
+    return buildNotifications(tasks, documents, profile, predeparture, lang);
+  }, [isAuthenticated, tasks, documents, profile, predeparture, lang]);
 
   const handleLogout = async () => {
     await logout();
@@ -189,7 +55,7 @@ const Navbar = ({ toggleSidebar }) => {
         setSelectedNotification(null);
         setPopupSuccess('');
       }, 1500);
-      fetchNotifications();
+      refreshUserData();
     } catch (err) {
       setPopupError(lang === 'en' ? 'Failed to complete task.' : 'টাস্ক সম্পন্ন করতে ব্যর্থ হয়েছে।');
     } finally {
@@ -210,7 +76,7 @@ const Navbar = ({ toggleSidebar }) => {
         setSelectedNotification(null);
         setPopupSuccess('');
       }, 1500);
-      fetchNotifications();
+      refreshUserData();
     } catch (err) {
       setPopupError(err.response?.data?.error || (lang === 'en' ? 'Failed to submit document' : 'ডকুমেন্ট জমা দিতে ব্যর্থ হয়েছে'));
     } finally {

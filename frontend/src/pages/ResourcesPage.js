@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { resourcesAPI } from '../services/api';
+import { useResourcesQuery } from '../hooks/useAppQueries';
+import { queryKeys } from '../lib/queryClient';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -25,9 +28,9 @@ const CATEGORY_META = {
 const ResourcesPage = () => {
   const { t, lang } = useLanguage();
   const { isAdmin } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: resources = [], isLoading: loading } = useResourcesQuery();
 
-  const [resources, setResources] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [activePreviewUrl, setActivePreviewUrl] = useState(null);
 
@@ -38,19 +41,8 @@ const ResourcesPage = () => {
 
   const categories = ['All', 'IELTS Academic', 'IELTS General', 'TOEFL Preparation', 'Visa Templates'];
 
-  useEffect(() => { fetchResources(); }, []);
-
-  const fetchResources = async () => {
-    try {
-      setLoading(true);
-      const res = await resourcesAPI.getAll();
-      setResources(res.data);
-    } catch (err) {
-      console.error('Failed to retrieve resources:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const invalidateResources = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.resources });
 
   const [saveError, setSaveError] = useState('');
   const [saveLoading, setSaveLoading] = useState(false);
@@ -69,7 +61,7 @@ const ResourcesPage = () => {
       setNewResource(defaultResourceState);
       setEditingResource(null);
       setShowAddForm(false);
-      fetchResources();
+      invalidateResources();
     } catch (err) {
       const status = err.response?.status;
       const msg = err.response?.data?.error || err.message || 'Unknown error';
@@ -102,7 +94,7 @@ const ResourcesPage = () => {
     if (!window.confirm(lang === 'en' ? 'Are you sure you want to delete this resource?' : 'আপনি কি নিশ্চিত যে আপনি এই রিসোর্সটি মুছে ফেলতে চান?')) return;
     try {
       await resourcesAPI.delete(id);
-      fetchResources();
+      invalidateResources();
     } catch (err) {
       console.error('Failed to delete resource:', err);
     }
