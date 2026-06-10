@@ -52,9 +52,14 @@ const ResourcesPage = () => {
     }
   };
 
+  const [saveError, setSaveError] = useState('');
+  const [saveLoading, setSaveLoading] = useState(false);
+
   const handleCreateResource = async (e) => {
     e.preventDefault();
     if (!newResource.title.trim() || !newResource.category) return;
+    setSaveError('');
+    setSaveLoading(true);
     try {
       if (editingResource) {
         await resourcesAPI.update(editingResource.id, newResource);
@@ -66,8 +71,18 @@ const ResourcesPage = () => {
       setShowAddForm(false);
       fetchResources();
     } catch (err) {
+      const status = err.response?.status;
+      const msg = err.response?.data?.error || err.message || 'Unknown error';
+      if (status === 401) {
+        setSaveError('Session expired. Please log out and log in again.');
+      } else if (status === 403) {
+        setSaveError('Admin permission required. Make sure your account has admin role.');
+      } else {
+        setSaveError(`Failed to save: ${msg}`);
+      }
       console.error('Failed to save resource:', err);
-      alert('Failed to save resource. Make sure you have correct permissions.');
+    } finally {
+      setSaveLoading(false);
     }
   };
 
@@ -266,6 +281,11 @@ const ResourcesPage = () => {
                 <input type="text" value={newResource.file_path} onChange={(e) => setNewResource(prev => ({ ...prev, file_path: e.target.value }))} placeholder="https://drive.google.com/..." className="w-full border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
             </div>
+            {saveError && (
+              <div className="bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 rounded-xl p-3 text-sm font-medium">
+                ⚠️ {saveError}
+              </div>
+            )}
             <div className="flex justify-end gap-2">
               <button 
                 type="button" 
@@ -273,18 +293,21 @@ const ResourcesPage = () => {
                   setShowAddForm(false);
                   setEditingResource(null);
                   setNewResource(defaultResourceState);
+                  setSaveError('');
                 }} 
                 className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition"
               >
                 {t('btnCancel')}
               </button>
-              <button type="submit" className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition">
+              <button type="submit" disabled={saveLoading} className="inline-flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition">
+                {saveLoading && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>}
                 {editingResource ? 'Update' : t('btnSave')}
               </button>
             </div>
           </form>
         </div>
       )}
+
 
       {/* Resources Grid */}
       {loading ? (

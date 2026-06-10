@@ -175,4 +175,38 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, logout, requestPasswordReset, resetPassword };
+const refreshToken = async (req, res) => {
+  const { refresh_token } = req.body;
+  if (!refresh_token) {
+    return res.status(400).json({ error: 'refresh_token is required' });
+  }
+  try {
+    const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+    if (error || !data?.session) {
+      return res.status(401).json({ error: 'Session expired. Please log in again.' });
+    }
+
+    const { data: customUser } = await supabase
+      .from('users')
+      .select('full_name, role')
+      .eq('id', data.user.id)
+      .maybeSingle();
+
+    const userWithName = {
+      ...data.user,
+      full_name: customUser?.full_name || data.user.user_metadata?.full_name || '',
+      role: customUser?.role || 'student',
+    };
+
+    res.json({
+      message: 'Token refreshed',
+      user: userWithName,
+      session: { ...data.session, user: userWithName },
+    });
+  } catch (err) {
+    console.error('refreshToken error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+module.exports = { register, login, logout, requestPasswordReset, resetPassword, refreshToken };
