@@ -34,6 +34,11 @@ const LorReviewSection = () => {
     }
   };
 
+  const handleClearReview = () => {
+    setReviewResult('');
+    setReviewError('');
+  };
+
   const handleReviewSubmit = async (event) => {
     event.preventDefault();
     if (!lorText.trim()) return;
@@ -131,8 +136,15 @@ const LorReviewSection = () => {
       )}
 
       {reviewError && (
-        <div className="rounded-2xl border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-950/20 p-4 text-sm text-red-700 dark:text-red-300 animate-fadeIn">
-          {reviewError}
+        <div className="rounded-2xl border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-950/20 p-4 text-sm text-red-700 dark:text-red-300 animate-fadeIn flex items-start justify-between gap-3">
+          <span>{reviewError}</span>
+          <button
+            type="button"
+            onClick={handleClearReview}
+            className="shrink-0 text-xs font-bold underline hover:no-underline"
+          >
+            {lang === 'en' ? 'Dismiss' : 'বাতিল'}
+          </button>
         </div>
       )}
 
@@ -142,9 +154,21 @@ const LorReviewSection = () => {
             <h4 className="font-black text-gray-800 dark:text-white">
               {lang === 'en' ? 'AI LOR Review' : 'এআই LOR রিভিউ'}
             </h4>
-            <span className="text-xs font-black px-2.5 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300">
-              {lang === 'en' ? 'Ready' : 'প্রস্তুত'}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black px-2.5 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300">
+                {lang === 'en' ? 'Ready' : 'প্রস্তুত'}
+              </span>
+              <button
+                type="button"
+                onClick={handleClearReview}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                {lang === 'en' ? 'Clear' : 'মুছুন'}
+              </button>
+            </div>
           </div>
 
           <div className="prose dark:prose-invert max-w-none">

@@ -69,6 +69,11 @@ const Dashboard = () => {
     ((prepProgress.completed / prepProgress.total) * 100 * 0.25)
   );
 
+  const handleClearRoadmap = () => {
+    setRoadmapResult('');
+    setRoadmapError('');
+  };
+
   const handleGenerateRoadmap = async () => {
     if (profileProgress < 100) {
       setRoadmapError(
@@ -470,7 +475,7 @@ const Dashboard = () => {
 
           {(roadmapError || roadmapResult) && (
             <div className="bg-white dark:bg-gray-800/40 backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-gray-100 dark:border-white/5 shadow-md space-y-6 animate-fadeIn">
-              <div className="flex justify-between items-center gap-3 border-b border-gray-100 dark:border-white/5 pb-4">
+              <div className="flex justify-between items-start gap-3 border-b border-gray-100 dark:border-white/5 pb-4">
                 <div>
                   <span className="inline-flex items-center gap-1 text-[10px] font-bold tracking-widest uppercase text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-full">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
@@ -486,6 +491,18 @@ const Dashboard = () => {
                     {lang === 'en' ? 'Your personalized recommendations appear here without leaving the dashboard.' : 'ড্যাশবোর্ড ছাড়াই আপনার ব্যক্তিগতকৃত সুপারিশ এখানে দেখানো হবে।'}
                   </p>
                 </div>
+                {(roadmapResult || roadmapError) && !loadingRoadmap && (
+                  <button
+                    type="button"
+                    onClick={handleClearRoadmap}
+                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-700 dark:hover:text-gray-200 transition"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    {lang === 'en' ? 'Clear' : 'মুছুন'}
+                  </button>
+                )}
               </div>
 
               {loadingRoadmap && (
