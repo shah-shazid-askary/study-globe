@@ -1,28 +1,25 @@
 [build]
-  command = "npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix backend"
+  command = "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend"
   publish = "frontend/build"
 
 [build.environment]
   NODE_VERSION = "20"
+  NPM_CONFIG_PRODUCTION = "false"
 
 [functions]
   directory = "backend/functions"
-  node_bundler = "esbuild"
-  included_files = ["backend/**"]
+  node_bundler = "nft"
   external_node_modules = [
     "express",
     "cors",
     "dotenv",
     "serverless-http",
-    "bcrypt",
     "@supabase/supabase-js",
-    "jsonwebtoken",
-    "@google/generative-ai",
     "ollama"
   ]
 
 [functions.api]
-  timeout = 26
+  timeout = 10
 
 [dev]
   command = "npm start --prefix frontend"

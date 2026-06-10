@@ -113,12 +113,13 @@ npm start
 1. Push the repository to GitHub (or GitLab/Bitbucket).
 2. In [Netlify](https://app.netlify.com/), click **Add new site → Import an existing project** and connect the repo.
 3. Leave **Base directory** empty — `netlify.toml` at the repo root configures the build.
-4. Under **Site configuration → Environment variables**, add:
+4. Under **Site configuration → Environment variables** (required — without these the API returns 502):
    - `SUPABASE_URL` — your Supabase project URL
-   - `SUPABASE_SERVICE_KEY` — your Supabase service role key
+   - `SUPABASE_SERVICE_KEY` — your Supabase **service role** key (not the anon key)
    - `FRONTEND_URL` — your Netlify site URL (e.g. `https://your-site.netlify.app`)
-   - `OLLAMA_HOST`, `OLLAMA_API_KEY`, `OLLAMA_MODEL` — optional, for AI chat/SOP review
+   - `OLLAMA_HOST`, `OLLAMA_API_KEY`, `OLLAMA_MODEL` — optional, for AI chat/SOP review only
 5. Deploy. The React app is served from `frontend/build` and `/api/*` routes to the Express serverless function.
+6. After deploy, verify the API: open `https://your-site.netlify.app/api/health` — you should see `{"status":"OK"}`.
 
 **Local Netlify preview** (frontend + API together):
 

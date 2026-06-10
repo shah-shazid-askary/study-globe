@@ -1,13 +1,19 @@
-const { Ollama } = require('ollama');
 const supabase = require('../config/supabase');
 
-// Initialize Ollama
-const ollamaConfig = {};
-if (process.env.OLLAMA_HOST) ollamaConfig.host = process.env.OLLAMA_HOST;
-if (process.env.OLLAMA_API_KEY) {
-  ollamaConfig.headers = { Authorization: `Bearer ${process.env.OLLAMA_API_KEY}` };
+let ollama;
+
+function getOllama() {
+  if (!ollama) {
+    const { Ollama } = require('ollama');
+    const ollamaConfig = {};
+    if (process.env.OLLAMA_HOST) ollamaConfig.host = process.env.OLLAMA_HOST;
+    if (process.env.OLLAMA_API_KEY) {
+      ollamaConfig.headers = { Authorization: `Bearer ${process.env.OLLAMA_API_KEY}` };
+    }
+    ollama = new Ollama(ollamaConfig);
+  }
+  return ollama;
 }
-const ollama = new Ollama(ollamaConfig);
 
 async function loadSupabaseData() {
   const fetchTableData = async (table, cols) => {
@@ -72,7 +78,7 @@ async function fetchContext(userMessage) {
     const lower = line.toLowerCase();
     
     let score = 0;
-    if (countryId && matchedCountryIds.has(countryId)) score += 20; // High priority for country match
+    if (countryId && matchedCountryIds.has(countryId)) score += 20;
     for (const w of queryWords) {
       if (lower.includes(w)) score += 2;
     }
@@ -136,7 +142,9 @@ function buildContextString(context) {
 }
 
 module.exports = {
-  ollama,
+  get ollama() {
+    return getOllama();
+  },
   fetchContext,
-  buildContextString
+  buildContextString,
 };
