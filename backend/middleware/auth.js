@@ -61,3 +61,4 @@ const requireAdmin = async (req, res, next) => {
 }; 
 
 module.exports = { authenticateUser, requireAdmin };
+ 
