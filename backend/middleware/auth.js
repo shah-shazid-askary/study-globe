@@ -58,6 +58,6 @@ const requireAdmin = async (req, res, next) => {
     console.error('[requireAdmin] Caught exception:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
-};
+}; 
 
 module.exports = { authenticateUser, requireAdmin };
