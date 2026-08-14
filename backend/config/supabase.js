@@ -42,4 +42,4 @@ module.exports = new Proxy(
       return typeof value === 'function' ? value.bind(getSupabase()) : value;
     },
   }
-);
+); 
