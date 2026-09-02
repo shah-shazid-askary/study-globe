@@ -24,7 +24,7 @@ const Privacy = () => {
 
         <section>
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-3">3. Data Security</h2>
-          <p>We implement a variety of security measures to maintain the safety of your personal information. Your data is stored securely using industry-standard encryption and access controls provided by Supabase and Vercel.</p>
+          <p>We implement a variety of security measures to maintain the safety of your personal information. Your data is stored securely using industry-standard encryption and access controls provided by Supabase and Netlify.</p>
         </section>
 
         <section>

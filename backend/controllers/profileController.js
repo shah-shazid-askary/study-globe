@@ -39,14 +39,18 @@ const getProfile = async (req, res) => {
 
     if (error) throw error;
 
-    // Also fetch full_name from the users table
+    // Also fetch full_name and role from the users table
     const { data: userData } = await supabase
       .from('users')
-      .select('full_name')
+      .select('full_name, role')
       .eq('id', req.user.id)
       .maybeSingle();
 
-    res.json({ ...(profileData || {}), full_name: userData?.full_name || '' });
+    res.json({ 
+      ...(profileData || {}), 
+      full_name: userData?.full_name || '',
+      role: userData?.role || 'student'
+    });
   } catch (err) {
     console.error('getProfile error:', err.message);
     res.status(500).json({ error: 'Failed to retrieve profile' });

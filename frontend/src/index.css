@@ -3,78 +3,110 @@
 @tailwind utilities;
 
 /* ── Global base ────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* ── Dark-mode global overrides ─────────────────────────────── */
-/* Ensures form elements never stay white-on-white in dark mode */
 .dark body {
-  background-color: #111827; /* gray-900 */
-  color: #f3f4f6;            /* gray-100 */
+  background-color: #0d1117;
+  color: #e6edf3;
 }
 
-.dark input,
-.dark textarea,
+/* Apply to form elements — EXCEPT chatbot's inline-styled input */
+.dark input:not(.chatbot-input),
+.dark textarea:not(.chatbot-textarea),
 .dark select {
-  background-color: #1f2937; /* gray-800 */
-  color: #f9fafb;            /* gray-50  */
-  border-color: #374151;     /* gray-700 */
+  background-color: #161b22;
+  color: #e6edf3;
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
-.dark input::placeholder,
-.dark textarea::placeholder {
-  color: #6b7280; /* gray-500 */
+.dark input:not(.chatbot-input)::placeholder,
+.dark textarea:not(.chatbot-textarea)::placeholder {
+  color: #6b7280;
 }
 
-/* Prevent white flash on focus for dark inputs */
-.dark input:focus,
-.dark textarea:focus,
+.dark input:not(.chatbot-input):focus,
+.dark textarea:not(.chatbot-textarea):focus,
 .dark select:focus {
-  background-color: #1f2937;
-  color: #f9fafb;
-  outline-color: #3b82f6; /* blue-500 */
+  background-color: #161b22;
+  color: #e6edf3;
+  outline-color: #6366f1;
 }
 
-/* Native select option styling in dark mode */
 .dark option {
-  background-color: #1f2937;
-  color: #f9fafb;
+  background-color: #161b22;
+  color: #e6edf3;
 }
 
-/* Scrollbar styling for dark mode */
-.dark ::-webkit-scrollbar {
+/* ── Light-mode card/surface improvements ────────────────────── */
+.light-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.dark .light-card {
+  background: #161b22;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Global scrollbar ────────────────────────────────────────── */
+::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-.dark ::-webkit-scrollbar-track {
-  background: #1f2937;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
-.dark ::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 3px;
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.25);
+  border-radius: 4px;
 }
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.45);
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Animations ──────────────────────────────────────────────── */
 @keyframes scan {
-  0% { top: 0%; opacity: 0; }
-  50% { opacity: 0.8; }
+  0%   { top: 0%;   opacity: 0; }
+  50%  {             opacity: 0.8; }
   100% { top: 100%; opacity: 0; }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: scale(0.98) translateY(4px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
 }
 
-.animate-scan {
-  animation: scan 2s linear infinite;
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0);    }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.25s ease-out forwards;
+@keyframes pulse-ring {
+  0%   { transform: scale(1);    opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0;   }
 }
+
+.animate-scan    { animation: scan    2s linear       infinite; }
+.animate-fadeIn  { animation: fadeIn  0.25s ease-out  forwards; }
+.animate-slideUp { animation: slideUp 0.35s ease-out  forwards; }
+.animate-pulse-ring { animation: pulse-ring 1.5s ease-out infinite; }

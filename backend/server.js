@@ -1,4 +1,9 @@
-require('dotenv').config();
+const path = require('path');
+// On Vercel, env vars come from the dashboard — do not load local .env files
+if (!process.env.VERCEL) {
+  require('dotenv').config({ path: path.join(__dirname, '.env') });
+  require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+}
 const express = require('express');
 const cors = require('cors');
 
@@ -19,19 +24,32 @@ const sopReviewRoutes = require('./routes/sopReview');
 
 const app = express();
 
-// FIX: CORS must be configured before routes
-const allowedOrigins = new Set([
-  process.env.FRONTEND_URL,
-  'http://localhost:3000',
-  'http://localhost:3001',
-]);
+// CORS: allow Vercel, Netlify, preview deploys, and local dev
+const allowedOrigins = new Set(
+  [
+    process.env.FRONTEND_URL,
+    process.env.URL,
+    process.env.DEPLOY_PRIME_URL,
+    process.env.DEPLOY_URL,
+    process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`,
+    process.env.VERCEL_BRANCH_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL &&
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL.startsWith('http')
+        ? process.env.VERCEL_PROJECT_PRODUCTION_URL
+        : `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`),
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:8888',
+  ].filter(Boolean)
+);
 
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.has(origin) || /^http:\/\/(localhost|127\.0\.0\.1):(\d+)$/.test(origin)) {
-      return callback(null, true);
-    }
+    if (allowedOrigins.has(origin)) return callback(null, true);
+    if (/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) return callback(null, true);
+    if (/^https:\/\/([a-z0-9-]+\.)*netlify\.app$/.test(origin)) return callback(null, true);
+    if (/^https:\/\/([a-z0-9-]+\.)*vercel\.app$/.test(origin)) return callback(null, true);
     return callback(null, false);
   },
   credentials: true,
@@ -57,10 +75,23 @@ apiRouter.use('/resources', resourceRoutes);
 apiRouter.use('/guidelines', guidelineRoutes);
 apiRouter.use('/ai/review-sop', sopReviewRoutes);
 
-apiRouter.get('/health', (req, res) => res.json({ status: 'OK' }));
+apiRouter.get('/health', (req, res) => {
+  const supabase = require('./config/supabase');
+  res.json({
+    status: 'OK',
+    supabaseConfigured: supabase.isConfigured(),
+    env: {
+      SUPABASE_URL: Boolean(process.env.SUPABASE_URL?.trim()),
+      SUPABASE_SERVICE_KEY: Boolean(process.env.SUPABASE_SERVICE_KEY?.trim()),
+      SUPABASE_SERVICE_ROLE_KEY: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
+      VERCEL: Boolean(process.env.VERCEL),
+    },
+  });
+});
 
-// Mount the router at both /api and / to handle Vercel routing
+// /api — local dev | /_/backend — Vercel Services | / — Netlify function proxy
 app.use('/api', apiRouter);
+app.use('/_/backend', apiRouter);
 app.use('/', apiRouter);
 
 // FIX: Added 404 handler
@@ -72,8 +103,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// For local development
-if (process.env.NODE_ENV !== 'production') {
+// Only start HTTP server when running server.js directly (not as a Netlify function import)
+if (require.main === module) {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }

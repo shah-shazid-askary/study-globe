@@ -47,7 +47,7 @@ apiRouter.use('/ai/review-sop', sopReviewRoutes);
 
 apiRouter.get('/health', (req, res) => res.json({ status: 'OK' }));
 
-// Mount the router at both /api and / to handle Vercel routing
+// Mount at /api for local dev; also at / for Netlify function proxy (strips /api prefix)
 app.use('/api', apiRouter);
 app.use('/', apiRouter);
 

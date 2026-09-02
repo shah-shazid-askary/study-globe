@@ -2,8 +2,17 @@
   <h1>🌍 StudyGlobe — Study Abroad Preparation System</h1>
   <p>A comprehensive, full-stack web platform empowering students to explore universities, academic programs, scholarships, and intake dates across the globe.</p>
   <br />
-  <strong><a href="https://YOUR-PROJECT-NAME.netlify.app">🚀 View Live Demo</a></strong>
+  <strong><a href="https://study-globe-pef9.vercel.app/">🚀 View Live Demo</a></strong>
 </div>
+
+---
+
+## 🌐 Live Demo
+
+| | |
+| :--- | :--- |
+| **Production (Vercel)** | [https://study-globe-pef9.vercel.app/](https://study-globe-pef9.vercel.app/) |
+| **API health check** | [https://study-globe-pef9.vercel.app/_/backend/health](https://study-globe-pef9.vercel.app/_/backend/health) |
 
 ---
 

@@ -2,8 +2,17 @@
   <h1>🌍 StudyGlobe — Study Abroad Preparation System</h1>
   <p>A comprehensive, full-stack web platform empowering students to explore universities, academic programs, scholarships, and intake dates across the globe.</p>
   <br />
-  <strong><a href="https://YOUR-PROJECT-NAME.netlify.app">🚀 View Live Demo</a></strong>
+  <strong><a href="https://study-globe-pef9.vercel.app/">🚀 View Live Demo</a></strong>
 </div>
+
+---
+
+## 🌐 Live Demo
+
+| | |
+| :--- | :--- |
+| **Production (Vercel)** | [https://study-globe-pef9.vercel.app/](https://study-globe-pef9.vercel.app/) |
+| **API health check** | [https://study-globe-pef9.vercel.app/_/backend/health](https://study-globe-pef9.vercel.app/_/backend/health) |
 
 ---
 
@@ -44,13 +53,7 @@ The project utilizes a modern web development stack to assure performance, scala
 
 ---
 
-## 👥 Meet The Team
 
-This capstone project was conceptualized, designed, and developed by:
-
-- **Kawshik Kumar Saha** — Database Design, API Architecture, Documentation, Testing & Validation
-- **Md. Fazly Rabby** — Frontend Development & UI/UX Design
-- **Md. Munjurul Islam** — Backend Development & Data Integration
 
 ---
 
@@ -114,8 +117,51 @@ npm start
 
 *The frontend application will now launch automatically on `http://localhost:3000`.*
 
----
+### Step 4: Deploy to Vercel
+
+1. Push the repository to GitHub and import it in [Vercel](https://vercel.com/new).
+2. Set the project **Framework Preset** to **Services** (required for `experimentalServices`).
+3. Leave the root directory as the repo root — `vercel.json` configures both services.
+4. Add **Environment variables** (all services share them):
+   - `SUPABASE_URL` — your Supabase project URL
+   - `SUPABASE_SERVICE_KEY` — your Supabase service role key
+   - `FRONTEND_URL` — your Vercel URL (e.g. `https://study-globe-pef9.vercel.app`)
+5. Deploy. The frontend is served at `/` and the Express API at `/_/backend` (e.g. `/_/backend/auth/login`).
+
+**Verify after deploy:** [https://study-globe-pef9.vercel.app/_/backend/health](https://study-globe-pef9.vercel.app/_/backend/health) → `{"status":"OK"}`
+
+**Local Vercel preview** (frontend + backend together):
+
+```bash
+npm install -g vercel
+vercel dev -L
+```
+
+### Step 5: Deploy to Netlify
+
+1. Push the repository to GitHub (or GitLab/Bitbucket).
+2. In [Netlify](https://app.netlify.com/), click **Add new site → Import an existing project** and connect the repo.
+3. Leave **Base directory** empty — `netlify.toml` at the repo root configures the build.
+4. Under **Site configuration → Environment variables** (required — without these the API returns 502):
+   - `SUPABASE_URL` — your Supabase project URL
+   - `SUPABASE_SERVICE_KEY` — your Supabase **service role** key (not the anon key)
+   - `FRONTEND_URL` — your Netlify site URL (e.g. `https://your-site.netlify.app`)
+   - `OLLAMA_HOST`, `OLLAMA_API_KEY`, `OLLAMA_MODEL` — optional, for AI chat/SOP review only
+5. Deploy. The React app is served from `frontend/build` and `/api/*` routes to the Express serverless function.
+6. After deploy, verify the API: open `https://your-site.netlify.app/api/health` — you should see `{"status":"OK"}`.
+
+**Local Netlify preview** (frontend + API together):
+
+```bash
+npm install -g netlify-cli
+netlify dev
+```
+
+Opens at `http://localhost:8888` with API at `/api`.
+
+---  
 
 <div align="center">
   <p><i>Developed with ❤️ for our Capstone Project.</i></p>
-</div>
+</div>    
+    

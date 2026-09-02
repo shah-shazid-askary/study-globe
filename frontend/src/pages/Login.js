@@ -20,7 +20,14 @@ const Login = () => {
       await login(email, password);
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed. Please try again.');
+      const message =
+        err.response?.data?.error ||
+        (err.request && !err.response
+          ? 'Cannot reach the server. Check that the backend is running and try again.'
+          : null) ||
+        err.message ||
+        'Login failed. Please try again.';
+      setError(message);
       // Keep the error visible for at least 10 seconds before automatically clearing it
       setTimeout(() => {
         setError(currentError => currentError ? '' : currentError);

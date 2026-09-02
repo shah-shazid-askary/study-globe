@@ -24,6 +24,7 @@ const createResource = async (req, res) => {
   }
 
   try {
+    console.log('[createResource] Request to insert resource:', req.body);
     const { data, error } = await supabase
       .from('resource_library')
       .insert({
@@ -36,10 +37,13 @@ const createResource = async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[createResource] Supabase insert error:', error);
+      throw error;
+    }
     res.status(201).json(data);
   } catch (err) {
-    console.error('createResource error:', err);
+    console.error('[createResource] Catch block error:', err);
     res.status(500).json({ error: err.message || 'Failed to create resource' });
   }
 };
@@ -49,6 +53,7 @@ const updateResource = async (req, res) => {
   const { category, title, description, external_url, file_path } = req.body;
 
   try {
+    console.log(`[updateResource] Request to update resource ${id}:`, req.body);
     const { data, error } = await supabase
       .from('resource_library')
       .update({
@@ -62,12 +67,18 @@ const updateResource = async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
-    if (!data) return res.status(404).json({ error: 'Resource not found' });
+    if (error) {
+      console.error('[updateResource] Supabase update error:', error);
+      throw error;
+    }
+    if (!data) {
+      console.log('[updateResource] Resource not found for ID:', id);
+      return res.status(404).json({ error: 'Resource not found' });
+    }
 
     res.json(data);
   } catch (err) {
-    console.error('updateResource error:', err);
+    console.error('[updateResource] Catch block error:', err);
     res.status(500).json({ error: err.message || 'Failed to update resource' });
   }
 };

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { universitiesAPI, profileAPI } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useProfileQuery, useUniversityQuery } from '../hooks/useAppQueries';
 
 // FIX: Added tabs for Intake (FR-07), Language (FR-08), Scholarships (FR-09) — all were missing
 const TABS = [
@@ -15,29 +15,11 @@ const TABS = [
 const UniversityDetails = () => {
   const { id } = useParams();
   const { lang } = useLanguage();
-  const [university, setUniversity] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { data: university, isLoading: loading, isError } = useUniversityQuery(id);
+  const { data: profile = null } = useProfileQuery();
   const [activeTab, setActiveTab] = useState('Overview');
 
-  useEffect(() => {
-    const loadDetailsAndProfile = async () => {
-      try {
-        const [uniRes, profileRes] = await Promise.all([
-          universitiesAPI.getById(id),
-          profileAPI.get().catch(() => ({ data: null }))
-        ]);
-        setUniversity(uniRes.data);
-        setProfile(profileRes.data);
-      } catch (err) {
-        setError('University not found or failed to load.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadDetailsAndProfile();
-  }, [id]);
+  const error = isError ? 'University not found or failed to load.' : '';
 
   if (loading) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
   if (error) return <div className="bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/30 rounded-lg p-4">{error}</div>;
@@ -132,7 +114,7 @@ const UniversityDetails = () => {
         <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl p-6 text-white shadow-md flex flex-col justify-between">
           <div className="space-y-2">
             <h3 className="font-extrabold text-lg uppercase tracking-wider text-blue-100">
-              {lang === 'en' ? 'Smart Match Score' : 'স্মার্ট ম্যাচ স্কোর'}
+              {lang === 'en' ? 'AI Smart Match Score' : 'এআই স্মার্ট ম্যাচ স্কোর'}
             </h3>
             <p className="text-xs opacity-90 leading-relaxed">
               {lang === 'en' ? 'Calculated based on your active student profile metrics.' : 'আপনার সেভ করা প্রোফাইলের তথ্যের সাথে সামঞ্জস্যতা।'}
@@ -174,7 +156,7 @@ const UniversityDetails = () => {
             className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
               activeTab === key
                 ? 'bg-blue-700 text-white shadow-sm'
-                : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-350 hover:bg-gray-50 dark:hover:bg-gray-700'
+                : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}>
             {label}
           </button>
@@ -212,7 +194,7 @@ const UniversityDetails = () => {
                   <h3 className="font-semibold text-gray-800 dark:text-white">{p.degree} — {p.field}</h3>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {p.degree && <span className="text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">{p.degree}</span>}
-                    {p.field && <span className="text-xs bg-gray-250 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full">{p.field}</span>}
+                    {p.field && <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full">{p.field}</span>}
                     {p.duration_years && <span className="text-xs text-gray-500 dark:text-gray-400">⏱ {p.duration_years} yrs</span>}
                     {p.tuition_per_year && <span className="text-xs text-gray-500 dark:text-gray-400">💰 ${Number(p.tuition_per_year).toLocaleString()}/yr</span>}
                   </div>
@@ -240,7 +222,7 @@ const UniversityDetails = () => {
                 </thead>
                 <tbody>
                   {university.intakes.map((intake) => (
-                    <tr key={intake.id} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750">
+                    <tr key={intake.id} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                       <td className="py-3 px-4 font-medium text-gray-800 dark:text-gray-200">{intake.intake_name}</td>
                       <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{intake.start_month || '—'}</td>
                     </tr>

@@ -1,4 +1,17 @@
 const supabase = require('../config/supabase');
+const { fetchUserMeta, buildAuthResponse } = require('../utils/authResponse');
+const { resolveFrontendUrl } = require('../utils/frontendUrl');
+
+const ensureSupabaseConfigured = (res) => {
+  if (!supabase.isConfigured()) {
+    console.error('Login failed: SUPABASE_URL or SUPABASE_SERVICE_KEY not set');
+    res.status(503).json({
+      error: 'Server configuration error. Set SUPABASE_URL and SUPABASE_SERVICE_KEY in Vercel environment variables.',
+    });
+    return false;
+  }
+  return true;
+};
 
 // Strategy:
 // - Supabase Auth manages sessions & JWTs (supabase.auth.signUp / signInWithPassword)
@@ -60,36 +73,30 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body;
 
+  if (!ensureSupabaseConfigured(res)) return;
+
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
   try {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return res.status(401).json({ error: 'Invalid email or password' });
+    if (error) {
+      const message = error.message || 'Invalid email or password';
+      return res.status(401).json({ error: message });
+    }
+    if (!data?.session || !data?.user) {
+      return res.status(401).json({ error: 'Login failed. Please verify your email and try again.' });
+    }
 
-    // Fetch full_name from custom users table
-    const { data: customUser } = await supabase
-      .from('users')
-      .select('full_name, role')
-      .eq('id', data.user.id)
-      .maybeSingle();
-
-    // Merge full_name into user object for frontend
-    const userWithName = {
-      ...data.user,
-      full_name: customUser?.full_name || data.user.user_metadata?.full_name || '',
-      role: customUser?.role || 'student',
-    };
-
-    res.json({
-      message: 'Login successful',
-      user: userWithName,
-      session: { ...data.session, user: userWithName },
-    });
+    const customUser = await fetchUserMeta(supabase, data.user.id);
+    res.json(buildAuthResponse(data.session, data.user, customUser, 'Login successful'));
   } catch (err) {
     console.error('Login error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({
+      error: 'Internal server error',
+      message: process.env.NODE_ENV === 'production' ? undefined : err.message,
+    });
   }
 };
 
@@ -127,7 +134,7 @@ const requestPasswordReset = async (req, res) => {
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.FRONTEND_URL || req.headers.origin || 'http://localhost:3000'}/reset-password`,
+      redirectTo: `${resolveFrontendUrl(req.headers.origin)}/reset-password`,
     });
 
     if (error) {
@@ -175,4 +182,26 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, logout, requestPasswordReset, resetPassword };
+const refreshToken = async (req, res) => {
+  const { refresh_token } = req.body;
+
+  if (!ensureSupabaseConfigured(res)) return;
+
+  if (!refresh_token) {
+    return res.status(400).json({ error: 'refresh_token is required' });
+  }
+  try {
+    const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+    if (error || !data?.session || !data?.user) {
+      return res.status(401).json({ error: 'Session expired. Please log in again.' });
+    }
+
+    const customUser = await fetchUserMeta(supabase, data.user.id);
+    res.json(buildAuthResponse(data.session, data.user, customUser, 'Token refreshed'));
+  } catch (err) {
+    console.error('refreshToken error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+module.exports = { register, login, logout, requestPasswordReset, resetPassword, refreshToken };
